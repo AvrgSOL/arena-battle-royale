@@ -8,6 +8,8 @@ import { GameManager } from './GameManager';
 import { getTopN } from './leaderboard';
 import { STORE_ITEMS, getOwnedItems, grantItem, verifyStorePurchase } from './store';
 import { recordReferral } from './referrals';
+import { submitSoloScore, getWeeklyTop, getWeeklyPool, getPrizeBreakdown, currentWeek, ENTRY_FEE_BASE } from './soloLeaderboard';
+import { verifyEntryPayment } from './token';
 
 const PORT = parseInt(process.env.PORT ?? '3002', 10);
 const manager = new GameManager();
@@ -220,6 +222,57 @@ const httpServer = http.createServer(async (req, res) => {
       res.end(JSON.stringify({ ok: true }));
     } catch (e) {
       console.error('[referral] /api/referral/record error:', e);
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: 'Internal server error' }));
+    }
+    return;
+  }
+
+  // ── Solo leaderboard ────────────────────────────────────────────────────
+  if (url === '/api/solo/leaderboard' && req.method === 'GET') {
+    res.end(JSON.stringify({
+      entries:  getWeeklyTop(10),
+      pool:     getWeeklyPool(),
+      prizes:   getPrizeBreakdown(),
+      entryFee: ENTRY_FEE_BASE,
+      week:     currentWeek(),
+    }));
+    return;
+  }
+
+  if (url === '/api/solo/score' && req.method === 'POST') {
+    try {
+      const raw  = await readBody(req);
+      const body = JSON.parse(raw) as { wallet?: string; name?: string; score?: number; txSig?: string };
+      const { wallet, name, score, txSig } = body;
+
+      if (!wallet || !name || score == null || !txSig) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: 'Missing fields' }));
+        return;
+      }
+
+      // Verify the ARENA payment if token is configured
+      const tokenEnabled = !!(process.env.ARENA_MINT_ADDRESS && process.env.TREASURY_ADDRESS);
+      if (tokenEnabled) {
+        const valid = await verifyEntryPayment(txSig, wallet, ENTRY_FEE_BASE);
+        if (!valid) {
+          res.writeHead(402);
+          res.end(JSON.stringify({ error: 'Payment verification failed' }));
+          return;
+        }
+      }
+
+      const err = submitSoloScore(wallet, name, score, txSig);
+      if (err) {
+        res.writeHead(409);
+        res.end(JSON.stringify({ error: err }));
+        return;
+      }
+
+      res.end(JSON.stringify({ ok: true, leaderboard: getWeeklyTop(10) }));
+    } catch (e) {
+      console.error('[solo/score] error:', e);
       res.writeHead(500);
       res.end(JSON.stringify({ error: 'Internal server error' }));
     }
