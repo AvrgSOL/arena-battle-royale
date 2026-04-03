@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { RoomSummary, GameState, LobbyPlayer, GameOverPayload } from '../types';
 import { Direction } from '../types';
 
-const WS_URL = 'ws://localhost:3002';
+const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:3002';
 
 type C2SMessage =
   | { type: 'JOIN_ROOM';   roomId: string; walletAddress: string; txSig: string; displayName: string }
