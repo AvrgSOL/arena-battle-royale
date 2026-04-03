@@ -33,6 +33,7 @@ export default function SoloPage({ navigate }: Props) {
   // Flash UI for pickups
   const [pickupFlash, setPickupFlash] = useState<string | null>(null);
   const [levelFlash, setLevelFlash] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   // Keyboard → direction (reuse game loop hook)
   const handleDirection = useCallback(
@@ -40,6 +41,22 @@ export default function SoloPage({ navigate }: Props) {
     [setDirection],
   );
   useGameLoop(handleDirection);
+
+  // 5-second countdown before game starts
+  const beginCountdown = useCallback(() => {
+    setCountdown(5);
+  }, []);
+
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown === 0) {
+      setCountdown(null);
+      start();
+      return;
+    }
+    const t = setTimeout(() => setCountdown(c => (c ?? 1) - 1), 1000);
+    return () => clearTimeout(t);
+  }, [countdown, start]);
 
   // Pickup flash
   useEffect(() => {
@@ -207,19 +224,39 @@ export default function SoloPage({ navigate }: Props) {
       ctx.font = `14px "Space Mono", monospace`;
       ctx.fillText('Press SPACE or click PLAY AGAIN to restart', W / 2, H / 2 + 100);
     }
-  }, [state, levelFlash]);
+  }, [state, levelFlash, countdown]);
+
+  // Countdown canvas overlay (separate effect so it re-renders each second)
+  useEffect(() => {
+    if (countdown === null) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#ffd54f';
+    ctx.font = `bold 160px "Space Mono", monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(countdown), W / 2, H / 2);
+    ctx.font = `bold 24px "Space Mono", monospace`;
+    ctx.fillStyle = '#ffffff88';
+    ctx.fillText('GET READY', W / 2, H / 2 + 100);
+  }, [countdown]);
 
   // Space bar starts or restarts
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.code === 'Space' && (!state.alive)) {
+      if (e.code === 'Space' && !state.alive && countdown === null) {
         e.preventDefault();
-        start();
+        beginCountdown();
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [state.alive, start]);
+  }, [state.alive, countdown, beginCountdown]);
 
   const isStar   = state.effects.starTicks > 0;
   const isFreeze = state.effects.freezeTicks > 0;
@@ -254,10 +291,15 @@ export default function SoloPage({ navigate }: Props) {
         </div>
 
         <div className="flex gap-2">
-          {(!state.alive) && (
-            <Button size="sm" variant="primary" onClick={start}>
+          {!state.alive && countdown === null && (
+            <Button size="sm" variant="primary" onClick={beginCountdown}>
               {state.started ? 'PLAY AGAIN' : 'START'}
             </Button>
+          )}
+          {countdown !== null && (
+            <span className="text-sm font-mono font-bold text-[#ffd54f] px-2">
+              Starting in {countdown}...
+            </span>
           )}
           <Button size="sm" variant="ghost" onClick={() => navigate({ name: 'landing' })}>
             EXIT
