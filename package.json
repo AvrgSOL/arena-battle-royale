@@ -1,0 +1,16 @@
+{
+  "name": "arena-battle-royale",
+  "private": true,
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=server\" \"npm run dev --workspace=client\"",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:server": "npm run dev --workspace=server",
+    "token:create": "npx ts-node --project scripts/tsconfig.json scripts/createToken.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.5.3"
+  }
+}
