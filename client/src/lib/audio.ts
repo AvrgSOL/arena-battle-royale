@@ -1,344 +1,370 @@
 /**
- * EDM / Techno audio engine — synthesized drums, fat bass, big leads.
- * No audio files. Web Audio API only.
+ * EDM synthesizer — Web Audio API only, no files.
  *
- * Landing: Hardwell / Spaceman big-room progressive house
- * Battle:  Big Wild melodic bass — emotional, organic, suspenseful
+ * Dubstep:  wobble bass (LFO → resonant lowpass filter), sidechain pump, half-time snare
+ * Techno:   Reese bass (detuned saws), driving 4/4, dark minimal stabs
+ *
+ * Generation counter prevents any stale loop from continuing after navigation.
  */
 
-// ── Note frequencies ──────────────────────────────────────────────────────────
-const N: Record<string, number> = {
-  A1:55.00,
-  C2:65.41, D2:73.42, E2:82.41, F2:87.31, G2:98.00, A2:110.00, B2:123.47,
-  C3:130.81, D3:146.83, E3:164.81, F3:174.61, G3:196.00, A3:220.00, B3:246.94,
-  C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
-  C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00, B5:987.77,
-  C6:1046.50, D6:1174.66, E6:1318.51, F6:1396.91,
-  R:0,
-};
-
-type Beat = [number, number]; // [freq_hz, duration_sec]
-
-// ── LANDING — "SPACEMAN" (Hardwell big room progressive house, 128 BPM) ───────
-// beat = 0.469s · 8th = 0.234s · 16th = 0.117s
-
-// Build: euphoric rising arpeggio (sweeps up into the drop)
-const BUILD_MELODY: Beat[] = [
-  [N.F4,.117],[N.A4,.117],[N.C5,.117],[N.F5,.117],[N.A5,.117],[N.C6,.117],[N.A5,.117],[N.F5,.117],
-  [N.G4,.117],[N.B4,.117],[N.D5,.117],[N.G5,.117],[N.B5,.117],[N.D6,.117],[N.B5,.117],[N.G5,.117],
-  // faster sweep
-  [N.F4,.083],[N.A4,.083],[N.C5,.083],[N.F5,.083],[N.A5,.083],[N.C6,.083],[N.F6,.083],[N.E6,.083],
-  [N.D6,.083],[N.C6,.083],[N.A5,.083],[N.G5,.083],[N.F5,.083],[N.E5,.083],[N.D5,.083],[N.R,.083],
-  // silence — anticipation
-  [N.R,.469],
-];
-
-// Drop: big room lead synth melody (Spaceman-esque euphoric lead)
-const DROP_MELODY: Beat[] = [
-  // Phrase 1 — uplifting hook
-  [N.F5,.234],[N.A5,.234],[N.C6,.469],[N.A5,.234],[N.G5,.234],
-  [N.A5,.234],[N.G5,.234],[N.F5,.469],[N.R,.234],[N.F5,.234],
-  // Phrase 2 — answering phrase
-  [N.G5,.234],[N.A5,.234],[N.C6,.469],[N.G5,.469],
-  [N.F5,.234],[N.E5,.234],[N.F5,.234],[N.G5,.234],[N.A5,.469],
-  // Phrase 3 — builds higher
-  [N.C6,.234],[N.D6,.234],[N.C6,.234],[N.A5,.234],[N.G5,.469],[N.F5,.469],
-  // Resolution
-  [N.A5,.234],[N.G5,.234],[N.F5,.234],[N.E5,.234],[N.F5,.938],
-];
-
-// Synth bass — fat sawtooth stabs under the drop
-const DROP_BASS: Beat[] = [
-  [N.F2,.469],[N.R,.469], [N.F2,.469],[N.R,.469],
-  [N.C2,.469],[N.R,.469], [N.G2,.469],[N.R,.469],
-  [N.F2,.469],[N.R,.469], [N.F2,.469],[N.C2,.234],[N.R,.234],
-  [N.A2,.234],[N.G2,.234],[N.F2,.469],[N.C2,.469],[N.R,.469],
-  [N.F2,.469],[N.R,.234],[N.F2,.234],[N.C2,.469],[N.R,.469],
-  [N.G2,.469],[N.A2,.469],[N.R,.469],[N.C2,.469],
-  [N.F2,.469],[N.G2,.234],[N.A2,.234],[N.G2,.469],[N.F2,.469],
-];
-
-// ── BATTLE — "AWAKEN" (Big Wild melodic bass / organic electronic, 122 BPM) ───
-// beat = 0.492s · 8th = 0.246s · 16th = 0.123s
-
-// Emotional lead melody — stepwise, tension + release
-const WILD_MELODY: Beat[] = [
-  // Opens sparse — just bass first
-  [N.R, 0.984],
-  // Emotional phrase enters
-  [N.A4,.246],[N.R,.123],[N.A4,.123],[N.B4,.246],[N.C5,.492],
-  [N.D5,.246],[N.C5,.246],[N.B4,.492],[N.R,.492],
-  // Tension rises
-  [N.C5,.246],[N.R,.123],[N.C5,.123],[N.D5,.246],[N.E5,.492],
-  [N.F5,.246],[N.E5,.246],[N.D5,.492],[N.R,.246],[N.A4,.246],
-  // Big build — ascending run
-  [N.A4,.123],[N.B4,.123],[N.C5,.123],[N.D5,.123],[N.E5,.123],[N.F5,.123],[N.G5,.123],[N.A5,.123],
-  // Drop into the groove — syncopated
-  [N.A5,.246],[N.R,.123],[N.A5,.123],[N.G5,.246],[N.F5,.492],
-  [N.E5,.246],[N.F5,.246],[N.G5,.246],[N.A5,.246],[N.R,.492],
-  // Resolution
-  [N.D5,.246],[N.E5,.246],[N.F5,.246],[N.E5,.246],
-  [N.D5,.492],[N.A4,.492],
-  [N.A4,.984],
-];
-
-// Big Wild bass — warm, wobbly, syncopated
-const WILD_BASS: Beat[] = [
-  [N.A2,.123],[N.R,.369],   [N.A2,.123],[N.R,.369],   // sparse open
-  [N.A2,.246],[N.G2,.246],  [N.A2,.246],[N.R,.246],
-  [N.D2,.492],[N.R,.246],[N.D2,.246],
-  [N.E2,.246],[N.R,.246],   [N.E2,.246],[N.A2,.246],
-  // Groove locks in
-  [N.A2,.123],[N.A2,.123],[N.R,.123],[N.A2,.123],[N.R,.123],[N.G2,.123],[N.A2,.123],[N.R,.123],
-  [N.F2,.246],[N.E2,.246],[N.R,.246],[N.A2,.246],
-  [N.A2,.123],[N.A2,.123],[N.R,.123],[N.A2,.123],[N.C3,.246],[N.R,.246],
-  [N.G2,.246],[N.F2,.246],[N.E2,.492],[N.R,.492],
-  [N.A2,.246],[N.R,.246],[N.A2,.246],[N.R,.246],
-  [N.D2,.492],[N.E2,.492],
-  [N.A2,.984],
-];
-
-// ── Engine ────────────────────────────────────────────────────────────────────
-
+// ── Audio context ─────────────────────────────────────────────────────────────
 let ctx: AudioContext | null = null;
-let masterGain: GainNode | null = null;
-let musicGain: GainNode | null = null;
-let sfxGain: GainNode | null = null;
-let drumGain: GainNode | null = null;
+let masterOut: GainNode | null  = null;   // final output
+let drumBus: GainNode | null    = null;   // kick / snare / hats
+let bassBus: GainNode | null    = null;   // wobble / reese
+let synthBus: GainNode | null   = null;   // stabs
+let sfxBus: GainNode | null     = null;   // sound effects
+
 let musicTimer: ReturnType<typeof setTimeout> | null = null;
 let gen = 0;
 let _muted = localStorage.getItem('arena_muted') === 'true';
 
 function getCtx(): AudioContext {
   if (!ctx) {
-    ctx = new AudioContext();
-    masterGain = ctx.createGain();
-    masterGain.gain.value = 1;
-    masterGain.connect(ctx.destination);
-
-    musicGain = ctx.createGain();
-    musicGain.gain.value = _muted ? 0 : 0.22;
-    musicGain.connect(masterGain);
-
-    sfxGain = ctx.createGain();
-    sfxGain.gain.value = _muted ? 0 : 0.4;
-    sfxGain.connect(masterGain);
-
-    drumGain = ctx.createGain();
-    drumGain.gain.value = _muted ? 0 : 0.55;
-    drumGain.connect(masterGain);
+    ctx         = new AudioContext();
+    masterOut   = ctx.createGain(); masterOut.gain.value = 0.9;
+    drumBus     = ctx.createGain(); drumBus.gain.value   = _muted ? 0 : 0.7;
+    bassBus     = ctx.createGain(); bassBus.gain.value   = _muted ? 0 : 0.55;
+    synthBus    = ctx.createGain(); synthBus.gain.value  = _muted ? 0 : 0.3;
+    sfxBus      = ctx.createGain(); sfxBus.gain.value    = _muted ? 0 : 0.45;
+    [drumBus, bassBus, synthBus, sfxBus].forEach(b => b!.connect(masterOut!));
+    masterOut.connect(ctx.destination);
   }
   if (ctx.state === 'suspended') ctx.resume();
   return ctx;
 }
 
-// ── Synth drum generators ─────────────────────────────────────────────────────
+// ── Drum synthesis ────────────────────────────────────────────────────────────
 
-function kick(time: number, vol = 0.9): void {
-  if (!ctx || !drumGain) return;
+function kick(t: number, vol = 0.95): void {
+  if (!ctx || !drumBus) return;
   const osc  = ctx.createOscillator();
   const gain = ctx.createGain();
-  osc.frequency.setValueAtTime(160, time);
-  osc.frequency.exponentialRampToValueAtTime(0.001, time + 0.35);
-  gain.gain.setValueAtTime(vol, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
-  osc.connect(gain); gain.connect(drumGain);
-  osc.start(time); osc.stop(time + 0.36);
+  osc.frequency.setValueAtTime(180, t);
+  osc.frequency.exponentialRampToValueAtTime(0.001, t + 0.38);
+  gain.gain.setValueAtTime(vol, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+  osc.connect(gain); gain.connect(drumBus);
+  osc.start(t); osc.stop(t + 0.41);
 }
 
-function snare(time: number, vol = 0.35): void {
-  if (!ctx || !drumGain) return;
-  const len    = Math.ceil(ctx.sampleRate * 0.18);
-  const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
-  const data   = buffer.getChannelData(0);
-  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len) * 0.8;
+function snare(t: number, vol = 0.38): void {
+  if (!ctx || !drumBus) return;
+  const len  = Math.ceil(ctx.sampleRate * 0.22);
+  const buf  = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.5);
   const src    = ctx.createBufferSource();
   const filter = ctx.createBiquadFilter();
   const gain   = ctx.createGain();
-  filter.type = 'bandpass'; filter.frequency.value = 2200; filter.Q.value = 0.8;
-  src.buffer = buffer;
-  gain.gain.setValueAtTime(vol, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
-  src.connect(filter); filter.connect(gain); gain.connect(drumGain);
-  src.start(time); src.stop(time + 0.19);
+  filter.type = 'bandpass'; filter.frequency.value = 2400; filter.Q.value = 0.9;
+  src.buffer = buf;
+  gain.gain.setValueAtTime(vol, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+  src.connect(filter); filter.connect(gain); gain.connect(drumBus);
+  src.start(t); src.stop(t + 0.23);
 }
 
-function hihat(time: number, vol = 0.18, open = false): void {
-  if (!ctx || !drumGain) return;
-  const dur    = open ? 0.12 : 0.04;
-  const len    = Math.ceil(ctx.sampleRate * dur);
-  const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
-  const data   = buffer.getChannelData(0);
+function hat(t: number, vol = 0.16, open = false): void {
+  if (!ctx || !drumBus) return;
+  const dur  = open ? 0.1 : 0.035;
+  const len  = Math.ceil(ctx.sampleRate * dur);
+  const buf  = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buf.getChannelData(0);
   for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
   const src    = ctx.createBufferSource();
   const filter = ctx.createBiquadFilter();
   const gain   = ctx.createGain();
-  filter.type = 'highpass'; filter.frequency.value = 9000;
-  src.buffer = buffer;
-  gain.gain.setValueAtTime(vol, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
-  src.connect(filter); filter.connect(gain); gain.connect(drumGain);
-  src.start(time); src.stop(time + dur + 0.01);
+  filter.type = 'highpass'; filter.frequency.value = 10000;
+  src.buffer = buf;
+  gain.gain.setValueAtTime(vol, t); gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.connect(filter); filter.connect(gain); gain.connect(drumBus);
+  src.start(t); src.stop(t + dur + 0.01);
 }
 
-// Schedule 4-on-floor beat (classic big room house)
-function scheduleBigRoom(startTime: number, bars: number, bpm: number): void {
-  const beat = 60 / bpm;
+// ── Wobble bass (dubstep) ─────────────────────────────────────────────────────
+// Sawtooth → resonant lowpass → LFO modulates cutoff → that iconic "wob"
+
+function wobble(freq: number, t: number, dur: number, lfoRate: number, vol = 0.7): void {
+  if (!ctx || !bassBus) return;
+  const osc = ctx.createOscillator();
+  osc.type = 'sawtooth'; osc.frequency.value = freq;
+
+  const sub = ctx.createOscillator();           // sub bass underneath for body
+  sub.type = 'sine'; sub.frequency.value = freq / 2;
+
+  const filt = ctx.createBiquadFilter();
+  filt.type = 'lowpass'; filt.Q.value = 14; filt.frequency.value = 300;
+
+  const lfo = ctx.createOscillator();
+  lfo.type = 'sine'; lfo.frequency.value = lfoRate;
+  const lfoAmt = ctx.createGain(); lfoAmt.gain.value = 1400;
+  lfo.connect(lfoAmt); lfoAmt.connect(filt.frequency);
+
+  const env = ctx.createGain();
+  env.gain.setValueAtTime(0, t);
+  env.gain.linearRampToValueAtTime(vol, t + 0.015);
+  env.gain.setValueAtTime(vol, t + dur * 0.92);
+  env.gain.linearRampToValueAtTime(0, t + dur);
+
+  const subEnv = ctx.createGain();
+  subEnv.gain.setValueAtTime(vol * 0.5, t);
+  subEnv.gain.setValueAtTime(vol * 0.5, t + dur * 0.92);
+  subEnv.gain.linearRampToValueAtTime(0, t + dur);
+
+  osc.connect(filt); filt.connect(env); env.connect(bassBus);
+  sub.connect(subEnv); subEnv.connect(bassBus);
+
+  osc.start(t); osc.stop(t + dur);
+  sub.start(t); sub.stop(t + dur);
+  lfo.start(t); lfo.stop(t + dur);
+}
+
+// ── Reese bass (techno) ───────────────────────────────────────────────────────
+// Two slightly detuned sawtooths → lowpass filter → that dark grinding techno bass
+
+function reese(freq: number, t: number, dur: number, vol = 0.65): void {
+  if (!ctx || !bassBus) return;
+  [1, 1.0045].forEach(detune => {
+    const osc  = ctx.createOscillator();
+    const filt = ctx.createBiquadFilter();
+    const env  = ctx.createGain();
+    osc.type = 'sawtooth'; osc.frequency.value = freq * detune;
+    filt.type = 'lowpass'; filt.frequency.value = 900; filt.Q.value = 4;
+    env.gain.setValueAtTime(0, t);
+    env.gain.linearRampToValueAtTime(vol * 0.5, t + 0.02);
+    env.gain.setValueAtTime(vol * 0.5, t + dur * 0.88);
+    env.gain.linearRampToValueAtTime(0, t + dur);
+    osc.connect(filt); filt.connect(env); env.connect(bassBus);
+    osc.start(t); osc.stop(t + dur);
+  });
+}
+
+// ── Synth stab ────────────────────────────────────────────────────────────────
+function stab(freq: number, t: number, vol = 0.3): void {
+  if (!ctx || !synthBus) return;
+  const osc  = ctx.createOscillator();
+  const filt = ctx.createBiquadFilter();
+  const env  = ctx.createGain();
+  osc.type = 'sawtooth'; osc.frequency.value = freq;
+  filt.type = 'lowpass'; filt.frequency.value = 2200; filt.Q.value = 2;
+  env.gain.setValueAtTime(vol, t);
+  env.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+  osc.connect(filt); filt.connect(env); env.connect(synthBus);
+  osc.start(t); osc.stop(t + 0.13);
+}
+
+// ── White noise riser (build-up before drop) ──────────────────────────────────
+function riser(t: number, dur: number): void {
+  if (!ctx || !synthBus) return;
+  const len  = Math.ceil(ctx.sampleRate * dur);
+  const buf  = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (i / len);
+  const src  = ctx.createBufferSource();
+  const filt = ctx.createBiquadFilter();
+  const env  = ctx.createGain();
+  filt.type = 'bandpass';
+  filt.frequency.setValueAtTime(300, t);
+  filt.frequency.exponentialRampToValueAtTime(6000, t + dur * 0.9);
+  filt.Q.value = 3;
+  src.buffer = buf;
+  env.gain.setValueAtTime(0.08, t);
+  env.gain.linearRampToValueAtTime(0.35, t + dur * 0.85);
+  env.gain.linearRampToValueAtTime(0, t + dur);
+  src.connect(filt); filt.connect(env); env.connect(synthBus);
+  src.start(t); src.stop(t + dur);
+}
+
+// ── Sidechain pump (volume ducks on every kick) ───────────────────────────────
+function sidechain(bus: GainNode, startT: number, beat: number, bars: number, baseVol: number): void {
   const total = bars * 4;
   for (let i = 0; i < total; i++) {
-    const t = startTime + i * beat;
-    kick(t);
-    if (i % 2 === 1) snare(t, 0.32);
-    // 16th note hi-hats
-    for (let h = 0; h < 4; h++) {
-      const ht = t + h * beat / 4;
-      const isOpen = h === 2 && i % 2 === 0;
-      hihat(ht, h % 2 === 0 ? 0.2 : 0.12, isOpen);
-    }
+    const t = startT + i * beat;
+    bus.gain.setValueAtTime(baseVol * 0.08, t + 0.001);
+    bus.gain.linearRampToValueAtTime(baseVol, t + beat * 0.75);
   }
 }
 
-// Big Wild style — syncopated, organic drum pattern
-function scheduleOrganic(startTime: number, bars: number, bpm: number): void {
-  const beat = 60 / bpm;
-  // Pattern per bar (in 16th-note offsets from bar start): kick times
-  const kickOffsets  = [0, 2.5, 4, 6.5, 8, 10.5, 12];
-  const snareOffsets = [2, 6, 10, 14];
-  const hatOffsets   = [0, 1, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15];
-
-  for (let bar = 0; bar < bars; bar++) {
-    const barStart = startTime + bar * 4 * beat;
-    const sixteenth = beat / 4;
-    kickOffsets.forEach(o  => kick(barStart + o * sixteenth, 0.8));
-    snareOffsets.forEach(o => snare(barStart + o * sixteenth, 0.28));
-    hatOffsets.forEach(o   => hihat(barStart + o * sixteenth, 0.14));
-  }
-}
-
-// ── Melody/bass scheduler ─────────────────────────────────────────────────────
-
-function scheduleBeats(beats: Beat[], startTime: number, vol: number, type: OscillatorType = 'square'): number {
-  const c = getCtx();
-  let t = startTime;
-  beats.forEach(([freq, dur]) => {
-    if (freq > 0 && musicGain) {
-      const osc  = c.createOscillator();
-      const gain = c.createGain();
-      osc.type = type;
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(vol, t);
-      gain.gain.linearRampToValueAtTime(0, t + dur * 0.88);
-      osc.connect(gain); gain.connect(musicGain);
-      osc.start(t); osc.stop(t + dur);
-    }
-    t += dur;
-  });
-  return t;
-}
-
-function len(beats: Beat[]): number { return beats.reduce((s,[,d]) => s + d, 0); }
-
-// ── Public API ────────────────────────────────────────────────────────────────
-
+// ── Generation / loop control ─────────────────────────────────────────────────
 export function stopMusic(): void {
   gen++;
   if (musicTimer) { clearTimeout(musicTimer); musicTimer = null; }
 }
 
+// ── LANDING — Dubstep drop (138 BPM) ─────────────────────────────────────────
+const DSTEP_BPM = 138;
+
+// Wobble pattern: [freq, bars, lfoRate]
+const WOBBLE_PATTERN: [number, number, number][] = [
+  [55.00, 2, 3.0],   // A1 - slow wob
+  [41.20, 2, 5.0],   // E1 - faster
+  [43.65, 2, 4.0],   // F1
+  [49.00, 1, 7.0],   // G1 - intense
+  [55.00, 1, 9.0],   // A1 - rapid fire
+];
+
+function playDubstep(myGen: number): void {
+  if (gen !== myGen) return;
+  const c = getCtx();
+  const beat = 60 / DSTEP_BPM;
+  const bar  = beat * 4;
+  let now = c.currentTime + 0.05;
+
+  // ── Build (4 bars) — kick + hats + riser, no bass yet ──────────────────────
+  const buildBars = 4;
+  for (let b = 0; b < buildBars; b++) {
+    const bs = now + b * bar;
+    kick(bs);                                    // downbeat only
+    kick(bs + beat * 2);                         // beat 3
+    for (let h = 0; h < 8; h++) hat(bs + h * beat / 2, 0.1 + b * 0.03);
+    if (b === 2) {                               // snare starts bar 3
+      snare(bs + beat, 0.2); snare(bs + beat * 3, 0.2);
+    }
+    if (b === 3) {
+      snare(bs + beat, 0.3); snare(bs + beat * 3, 0.3);
+    }
+  }
+  riser(now + bar, bar * 3);                     // riser starts bar 2
+
+  // ── Drop ───────────────────────────────────────────────────────────────────
+  const dropStart = now + buildBars * bar;
+  let wt = dropStart;
+
+  WOBBLE_PATTERN.forEach(([freq, bars, rate]) => {
+    const dur = bars * bar;
+    // Schedule kick/snare for these bars
+    for (let b = 0; b < bars; b++) {
+      const bs = wt + b * bar;
+      kick(bs);            kick(bs + beat * 0.5);   // boom boom
+      kick(bs + beat * 2); kick(bs + beat * 2.5);   // boom boom
+      snare(bs + beat);                              // half-time snare on 2
+      snare(bs + beat * 3);                          // and 4
+      for (let h = 0; h < 16; h++) hat(bs + h * beat / 4, 0.13 + (h % 2) * 0.06);
+    }
+    wobble(freq, wt, dur, rate);
+    // Synth stab accent on every 2nd beat
+    for (let b = 0; b < bars; b++) {
+      stab(freq * 8, wt + b * bar + beat, 0.22);
+      stab(freq * 8, wt + b * bar + beat * 3, 0.18);
+    }
+    wt += dur;
+  });
+
+  // Sidechain pump the bass bus during drop
+  const totalDropBars = WOBBLE_PATTERN.reduce((s, [,b]) => s + b, 0);
+  if (bassBus) sidechain(bassBus, dropStart, beat, totalDropBars, 0.55);
+
+  const totalLen = (buildBars + totalDropBars) * bar;
+  musicTimer = setTimeout(() => playDubstep(myGen), (totalLen - 0.1) * 1000);
+}
+
+// ── BATTLE — Dark Techno (140 BPM) ───────────────────────────────────────────
+const TECHNO_BPM = 140;
+
+// Reese pattern: [freq, beats duration] cycling over 8 bars
+const REESE_SEQ: [number, number][] = [
+  [55.00, 2],[55.00, 2],   // A1 × 2 bars
+  [41.20, 2],[41.20, 2],   // E1 × 2 bars
+  [43.65, 2],[43.65, 2],   // F1 × 2 bars
+  [49.00, 1],[55.00, 1],[49.00, 2], // G→A→G tension
+];
+
+// Sparse dark stab melody (just 3 notes — not a running melody)
+const STAB_PATTERN: [number, number][] = [  // [beat_offset_in_bar, freq]
+  [1, 220], [7, 164.81], [13, 185.00],
+];
+
+function playTechno(myGen: number): void {
+  if (gen !== myGen) return;
+  const c = getCtx();
+  const beat = 60 / TECHNO_BPM;
+  const bar  = beat * 4;
+  const bars = 8;
+  const now  = c.currentTime + 0.05;
+
+  // Drums — 4/4 kick, snare 2+4, 16th hats
+  for (let b = 0; b < bars; b++) {
+    const bs = now + b * bar;
+    for (let i = 0; i < 4; i++) {
+      kick(bs + i * beat, 0.85);
+      if (i % 2 === 1) snare(bs + i * beat, 0.3);
+    }
+    for (let h = 0; h < 16; h++) hat(bs + h * beat / 4, 0.12 + (h % 4 === 0 ? 0.06 : 0));
+  }
+
+  // Reese bass
+  let rt = now;
+  REESE_SEQ.forEach(([freq, beatDur]) => {
+    reese(freq, rt, beatDur * beat, 0.6);
+    rt += beatDur * beat;
+  });
+
+  // Sparse stab accents — dark but not melodic
+  for (let b = 0; b < bars; b += 2) {
+    const bs = now + b * bar;
+    STAB_PATTERN.forEach(([beatOff, freq]) => {
+      stab(freq, bs + beatOff * beat, 0.22);
+    });
+  }
+
+  // Sidechain pump bass on every kick
+  if (bassBus) sidechain(bassBus, now, beat, bars, 0.55);
+
+  musicTimer = setTimeout(() => playTechno(myGen), (bars * bar - 0.1) * 1000);
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
 export function startMusic(track: 'landing' | 'battle'): void {
   stopMusic();
   const myGen = gen;
   getCtx();
-
-  if (track === 'landing') {
-    // 128 BPM big room house — build → drop → repeat
-    const BPM = 128;
-    const buildBars = 2;
-    const dropBars  = 8;
-
-    function playLanding() {
-      if (gen !== myGen) return;
-      const c   = getCtx();
-      const now = c.currentTime;
-      const buildLen = len(BUILD_MELODY);
-
-      // Build phase — arpeggio only, kick builds in
-      scheduleBeats(BUILD_MELODY, now, 0.5);
-      scheduleBigRoom(now + buildLen * 0.5, buildBars, BPM); // drums enter halfway through build
-
-      // Drop phase
-      const dropStart = now + buildLen;
-      scheduleBeats(DROP_MELODY, dropStart, 0.45);
-      scheduleBeats(DROP_BASS,   dropStart, 0.6, 'sawtooth');
-      scheduleBigRoom(dropStart, dropBars, BPM);
-
-      const totalLen = buildLen + len(DROP_MELODY);
-      musicTimer = setTimeout(playLanding, (totalLen - 0.05) * 1000);
-    }
-    playLanding();
-
-  } else {
-    // 122 BPM Big Wild organic melodic bass
-    const BPM = 122;
-    const bars = 10;
-
-    function playBattle() {
-      if (gen !== myGen) return;
-      const c   = getCtx();
-      const now = c.currentTime;
-      scheduleBeats(WILD_MELODY, now, 0.45);
-      scheduleBeats(WILD_BASS,   now, 0.6, 'sawtooth');
-      scheduleOrganic(now, bars, BPM);
-
-      const totalLen = len(WILD_MELODY);
-      musicTimer = setTimeout(playBattle, (totalLen - 0.05) * 1000);
-    }
-    playBattle();
-  }
+  if (track === 'landing') playDubstep(myGen);
+  else playTechno(myGen);
 }
 
 // ── SFX ───────────────────────────────────────────────────────────────────────
 
-function sfxNote(freq: number, start: number, dur: number, vol: number, type: OscillatorType = 'square'): void {
-  if (!ctx || !sfxGain || freq === 0) return;
+function sfxOsc(freq: number, t: number, dur: number, vol: number, type: OscillatorType = 'square'): void {
+  if (!ctx || !sfxBus || freq === 0) return;
   const osc  = ctx.createOscillator();
   const gain = ctx.createGain();
-  osc.type = type;
-  osc.frequency.value = freq;
-  gain.gain.setValueAtTime(vol, start);
-  gain.gain.linearRampToValueAtTime(0, start + dur * 0.85);
-  osc.connect(gain); gain.connect(sfxGain);
-  osc.start(start); osc.stop(start + dur);
+  osc.type = type; osc.frequency.value = freq;
+  gain.gain.setValueAtTime(vol, t);
+  gain.gain.linearRampToValueAtTime(0, t + dur * 0.85);
+  osc.connect(gain); gain.connect(sfxBus);
+  osc.start(t); osc.stop(t + dur);
 }
 
 export function playSfx(type: 'eat' | 'levelUp' | 'powerUp' | 'gameOver' | 'bomb' | 'freeze' | 'shield'): void {
   if (_muted) return;
   const c = getCtx();
-  const now = c.currentTime;
+  const t = c.currentTime;
   switch (type) {
     case 'eat':
-      sfxNote(N.E5, now, 0.06, 0.45);
-      sfxNote(N.A5, now+0.06, 0.06, 0.45);
+      sfxOsc(659, t, 0.07, 0.4); sfxOsc(880, t+0.07, 0.07, 0.4);
       break;
     case 'levelUp':
-      [N.C5,N.E5,N.G5,N.C6].forEach((f,i) => sfxNote(f, now+i*0.09, 0.14, 0.45));
+      [523, 659, 784, 1046].forEach((f,i) => sfxOsc(f, t+i*0.09, 0.13, 0.4));
       break;
     case 'powerUp':
-      [N.G4,N.B4,N.D5,N.G5,N.B5].forEach((f,i) => sfxNote(f, now+i*0.06, 0.09, 0.4));
+      wobble(110, t, 0.4, 8, 0.5);
       break;
     case 'gameOver':
-      kick(now, 0.5);
-      [N.C5,N.B4,N.G4,N.E4,N.C4].forEach((f,i) => sfxNote(f, now+i*0.16, 0.22, 0.45, 'sawtooth'));
+      kick(t, 0.5); kick(t+0.06, 0.4);
+      [523, 494, 392, 330, 261].forEach((f,i) => sfxOsc(f, t+i*0.14, 0.2, 0.4, 'sawtooth'));
       break;
     case 'bomb':
-      kick(now, 1.0); kick(now+0.05, 0.7);
-      [N.G4,N.E4,N.C4,N.G3,N.A2].forEach((f,i) => sfxNote(f, now+i*0.07, 0.14, 0.5, 'sawtooth'));
+      kick(t, 1.0); kick(t+0.04, 0.8); kick(t+0.1, 0.6);
+      wobble(55, t, 0.5, 5, 0.8);
       break;
     case 'freeze':
-      [N.B5,N.G5,N.E5,N.C5,N.A4].forEach((f,i) => sfxNote(f, now+i*0.06, 0.09, 0.32));
+      [1318, 1047, 784, 523, 440].forEach((f,i) => sfxOsc(f, t+i*0.065, 0.09, 0.3));
       break;
     case 'shield':
-      [N.E5,N.G5,N.B5,N.G5,N.E5].forEach((f,i) => sfxNote(f, now+i*0.055, 0.08, 0.3));
+      reese(220, t, 0.3, 0.4);
+      [659, 784, 987].forEach((f,i) => sfxOsc(f, t+i*0.07, 0.1, 0.3));
       break;
   }
 }
@@ -346,9 +372,11 @@ export function playSfx(type: 'eat' | 'levelUp' | 'powerUp' | 'gameOver' | 'bomb
 export function setMuted(muted: boolean): void {
   _muted = muted;
   localStorage.setItem('arena_muted', String(muted));
-  if (musicGain) musicGain.gain.value = muted ? 0 : 0.22;
-  if (sfxGain)   sfxGain.gain.value   = muted ? 0 : 0.4;
-  if (drumGain)  drumGain.gain.value  = muted ? 0 : 0.55;
+  const v = (base: number) => muted ? 0 : base;
+  if (drumBus)  drumBus.gain.value  = v(0.7);
+  if (bassBus)  bassBus.gain.value  = v(0.55);
+  if (synthBus) synthBus.gain.value = v(0.3);
+  if (sfxBus)   sfxBus.gain.value   = v(0.45);
 }
 
 export function isMuted(): boolean { return _muted; }
