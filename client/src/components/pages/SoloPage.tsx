@@ -5,6 +5,7 @@ import { Page } from '../../types';
 import { useSoloGame, SOLO_W, SOLO_H, SoloPowerUpType } from '../../hooks/useSoloGame';
 import { useGameLoop } from '../../hooks/useGameLoop';
 import { buildEntryPaymentTx, isArenaConfigured, ARENA_DECIMALS } from '../../lib/token';
+import { startMusic, stopMusic, playSfx, setMuted, isMuted } from '../../lib/audio';
 import Button from '../ui/Button';
 
 const CELL = 20;
@@ -54,6 +55,11 @@ export default function SoloPage({ navigate }: Props) {
   const [pickupFlash, setPickupFlash] = useState<string | null>(null);
   const [levelFlash, setLevelFlash]   = useState(false);
   const [countdown, setCountdown]     = useState<number | null>(null);
+  const [muted, setMutedState]        = useState(isMuted());
+
+  // Particles: [x, y, vx, vy, life, color]
+  const particlesRef = useRef<[number,number,number,number,number,string][]>([]);
+  const animFrameRef = useRef<number | null>(null);
   const [paying, setPaying]           = useState(false);
   const [payError, setPayError]       = useState<string | null>(null);
   const [txSigRef]                    = useState<{ current: string | null }>({ current: null });
@@ -67,6 +73,20 @@ export default function SoloPage({ navigate }: Props) {
     [setDirection],
   );
   useGameLoop(handleDirection);
+
+  // Music
+  useEffect(() => {
+    if (state.alive) startMusic('battle');
+    else stopMusic();
+  }, [state.alive]);
+
+  useEffect(() => () => stopMusic(), []);
+
+  function toggleMute() {
+    const next = !muted;
+    setMutedState(next);
+    setMuted(next);
+  }
 
   // Fetch leaderboard on mount and after score submit
   const fetchLeaderboard = useCallback(async () => {
@@ -134,21 +154,51 @@ export default function SoloPage({ navigate }: Props) {
     }
   }, [publicKey, connection, sendTransaction, beginCountdown, txSigRef]);
 
-  // Pickup flash
+  // Eat SFX + particles
+  const prevScoreRef = useRef(0);
+  useEffect(() => {
+    if (!state.alive) return;
+    if (state.score > prevScoreRef.current) {
+      playSfx('eat');
+      // Spawn particles at snake head
+      const head = state.snake[0];
+      if (head) {
+        const cx = head.x * CELL + CELL / 2;
+        const cy = head.y * CELL + CELL / 2;
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2;
+          const speed = 1.5 + Math.random() * 2;
+          particlesRef.current.push([cx, cy, Math.cos(angle)*speed, Math.sin(angle)*speed, 1.0, '#00e5ff']);
+        }
+      }
+    }
+    prevScoreRef.current = state.score;
+  }, [state.score, state.alive]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pickup flash + SFX
   useEffect(() => {
     if (!state.lastPickup) return;
     setPickupFlash(POWERUP_LABEL[state.lastPickup]);
+    playSfx(state.lastPickup === 'freeze' ? 'freeze' : state.lastPickup === 'shield' ? 'shield' : state.lastPickup === 'bomb' ? 'bomb' : 'powerUp');
     const t = setTimeout(() => setPickupFlash(null), 1200);
     return () => clearTimeout(t);
   }, [state.tick, state.lastPickup]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Level-up flash
+  // Level-up flash + SFX
   useEffect(() => {
     if (!state.levelUpFlash) return;
     setLevelFlash(true);
+    playSfx('levelUp');
     const t = setTimeout(() => setLevelFlash(false), 600);
     return () => clearTimeout(t);
   }, [state.level]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Game over SFX
+  const prevAliveRef = useRef(true);
+  useEffect(() => {
+    if (prevAliveRef.current && !state.alive && state.started) playSfx('gameOver');
+    prevAliveRef.current = state.alive;
+  }, [state.alive, state.started]);
 
   // Canvas render
   useEffect(() => {
@@ -279,6 +329,17 @@ export default function SoloPage({ navigate }: Props) {
       ctx.font = `14px "Space Mono", monospace`;
       ctx.fillText('Select a mode and press START to play again', W / 2, H / 2 + 100);
     }
+
+    // Particles
+    particlesRef.current = particlesRef.current
+      .map(([x, y, vx, vy, life, color]) => [x + vx, y + vy, vx * 0.9, vy * 0.9, life - 0.08, color] as [number,number,number,number,number,string])
+      .filter(([,,,, life]) => life > 0);
+    particlesRef.current.forEach(([x, y,,, life, color]) => {
+      ctx.globalAlpha = life;
+      ctx.fillStyle = color;
+      ctx.fillRect(x - 2, y - 2, 4, 4);
+    });
+    ctx.globalAlpha = 1;
   }, [state, levelFlash, countdown]);
 
   // Countdown overlay
@@ -398,6 +459,9 @@ export default function SoloPage({ navigate }: Props) {
           {countdown !== null && (
             <span className="text-sm font-mono font-bold text-[#ffd54f] px-2">Starting in {countdown}...</span>
           )}
+          <button onClick={toggleMute} className="text-xs font-mono px-2 py-1 rounded border border-[#1a2840] text-gray-400 hover:text-white transition-colors">
+            {muted ? '🔇' : '🔊'}
+          </button>
           <Button size="sm" variant="ghost" onClick={() => navigate({ name: 'landing' })}>EXIT</Button>
         </div>
       </div>
