@@ -2,22 +2,24 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install deps first (better layer caching)
+# Install ALL deps (including devDeps needed for TypeScript build)
 COPY package*.json ./
-RUN npm ci --omit=dev --ignore-scripts
+RUN npm ci
 
-# Copy source and compile
+# Compile TypeScript
 COPY tsconfig.json ./
 COPY src ./src
-RUN npx tsc
+RUN npm run build
+
+# Prune devDeps after compile
+RUN npm prune --omit=dev
 
 # Create data directory for persistent JSON files
-RUN mkdir -p /data && chown node:node /data
+RUN mkdir -p /data
 
 ENV DATA_DIR=/data
 ENV NODE_ENV=production
 
-USER node
 EXPOSE 3002
 
 CMD ["node", "dist/index.js"]
