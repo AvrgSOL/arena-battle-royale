@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 
 const LS_KEY = 'arena_ref';
-const API_URL = 'http://localhost:3002/api/referral/record';
+const API_URL = `${import.meta.env.VITE_API_URL ?? 'http://localhost:3002'}/api/referral/record`;
 
 export function useReferral(): { getReferralLink: () => string } {
   const { publicKey } = useWallet();

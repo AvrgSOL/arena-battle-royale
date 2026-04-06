@@ -15,7 +15,7 @@ export function useLeaderboard() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetch('http://localhost:3002/api/leaderboard')
+    fetch(`${import.meta.env.VITE_API_URL ?? 'http://localhost:3002'}/api/leaderboard`)
       .then(r => r.json())
       .then((data: LeaderEntry[]) => {
         if (!cancelled) {

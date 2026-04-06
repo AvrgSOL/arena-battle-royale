@@ -14,9 +14,10 @@ const H    = SOLO_H * CELL; // 600
 
 const ENTRY_FEE_BASE = 10 * 10 ** ARENA_DECIMALS; // 10 ARENA
 
-const SERVER_HTTP = (import.meta.env.VITE_WS_URL as string ?? 'ws://localhost:3002')
-  .replace(/^wss:\/\//, 'https://')
-  .replace(/^ws:\/\//, 'http://');
+const SERVER_HTTP = import.meta.env.VITE_API_URL ??
+  ((import.meta.env.VITE_WS_URL as string ?? 'ws://localhost:3002')
+    .replace(/^wss:\/\//, 'https://')
+    .replace(/^ws:\/\//, 'http://'));
 
 const POWERUP_LABEL: Record<SoloPowerUpType, string> = {
   freeze: '❄️ FREEZE',

@@ -9,7 +9,7 @@ export interface TokenStats {
   circulatingSupply: number; // totalSupply - treasury balance, display units
 }
 
-const API_URL = 'http://localhost:3002/api/token/stats';
+const API_URL = `${import.meta.env.VITE_API_URL ?? 'http://localhost:3002'}/api/token/stats`;
 const POLL_INTERVAL_MS = 30_000;
 
 export function useTokenStats(): { stats: TokenStats | null; loading: boolean } {
