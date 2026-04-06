@@ -10,6 +10,8 @@ import LeaderboardPage from './components/pages/LeaderboardPage';
 import StorePage from './components/pages/StorePage';
 import SoloPage from './components/pages/SoloPage';
 import { GameSocketProvider } from './context/GameSocketContext';
+import AudioPlayer from './components/ui/AudioPlayer';
+import ChatPanel from './components/ui/ChatPanel';
 
 interface Toast {
   id: number;
@@ -83,9 +85,11 @@ export default function App() {
           {page.name === 'leaderboard' && <LeaderboardPage navigate={navigate} />}
           {page.name === 'store'       && <StorePage      navigate={navigate} addToast={addToast} />}
           {page.name === 'solo'        && <SoloPage       navigate={navigate} />}
+          <ChatPanel />
         </GameSocketProvider>
       </main>
 
+      <AudioPlayer />
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );

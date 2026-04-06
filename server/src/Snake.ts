@@ -12,15 +12,21 @@ const DELTA: Record<Direction, Vec2> = {
 };
 
 export class Snake {
-  id:         string;
-  body:       Vec2[];
-  dir:        Direction;
-  alive:      boolean = true;
-  score:      number  = 0;
-  color:      string;
-  wallet:     string;
-  name:       string;
-  pendingDir: Direction | null = null;
+  id:           string;
+  body:         Vec2[];
+  dir:          Direction;
+  alive:        boolean  = true;
+  score:        number   = 0;
+  color:        string;
+  wallet:       string;
+  name:         string;
+  pendingDir:   Direction | null = null;
+
+  // Power-up status fields
+  shielded:    boolean = false;
+  ghostTicks:  number  = 0;
+  frozenTicks: number  = 0;
+  magnetTicks: number  = 0;
 
   constructor(id: string, start: Vec2, dir: Direction, color: string, wallet: string, name: string) {
     this.id     = id;
@@ -28,7 +34,6 @@ export class Snake {
     this.color  = color;
     this.wallet = wallet;
     this.name   = name;
-    // Start with 3 segments
     const d = DELTA[dir];
     this.body = [
       { x: start.x,           y: start.y           },
@@ -38,7 +43,7 @@ export class Snake {
   }
 
   setDirection(dir: Direction): void {
-    if (dir === OPPOSITE[this.dir]) return; // can't reverse
+    if (dir === OPPOSITE[this.dir]) return;
     this.pendingDir = dir;
   }
 

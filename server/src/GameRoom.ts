@@ -5,12 +5,17 @@ import { v4 as uuid } from 'uuid';
 import { Snake } from './Snake';
 import {
   RoomConfig, GameState, S2CMessage, C2SMessage,
-  LobbyPlayer, Vec2, Direction, Zone, PowerUp, PowerUpType,
+  LobbyPlayer, Vec2, Direction, Zone, PowerUp, PowerUpType, GameEventType,
 } from './types';
-import { isTokenEnabled, payWinner, burnTokens } from './token';
+import { isTokenEnabled, payWinner, payWinnerSol, swapArenaForSol, burnTokens } from './token';
 import { getReferrer, hasBeenRewarded, markRewarded, REFERRAL_BONUS } from './referrals';
+import { awardXP } from './xp';
+import { updateChallengeProgress, claimChallenge, getDailyChallenges } from './challenges';
+import { updateELO } from './ranking';
+import { recordWin, resetStreak } from './streaks';
 
-const GAMES_LOG = path.join(process.cwd(), '..', 'server', 'games.log');
+const DATA_DIR  = process.env.DATA_DIR ?? path.join(__dirname, '..');
+const GAMES_LOG = path.join(DATA_DIR, 'games.log');
 function logGame(msg: string): void {
   try { fs.appendFileSync(GAMES_LOG, `[${new Date().toISOString()}] ${msg}\n`); } catch {}
 }
@@ -27,26 +32,41 @@ const DM_GRID_H        = 30;
 const DM_TICK_MS       = 150;
 const DM_FOOD_COUNT    = 6;
 const DM_POWERUP_COUNT = 2;
-// Zone shrinks 1 cell per side every N ticks; speed increases every M ticks
-const DM_ZONE_INTERVAL  = 80;   // ~12s between shrinks
-const DM_SPEED_INTERVAL = 100;  // ~15s between speed bumps
-const DM_SPEED_STEP     = 15;   // ms faster each bump
-const DM_SPEED_MIN      = 70;   // fastest possible tick
+const DM_ZONE_INTERVAL  = 80;
+const DM_SPEED_INTERVAL = 100;
+const DM_SPEED_STEP     = 15;
+const DM_SPEED_MIN      = 70;
 
-// Deathmatch blockers — central obstacles only, spawn corridors kept clear
-// Spawns: P1 at (3,15) heading RIGHT, P2 at (36,15) heading LEFT
-// Keep x<13 and x>27 at y=14-16 completely clear
+// Standard mode: spawn a power-up every N ticks
+const STD_POWERUP_INTERVAL = 60;
+const STD_MAX_POWERUPS     = 3;
+
+// Mid-game events
+const EVENT_INTERVAL_MIN = 250;
+const EVENT_INTERVAL_RNG = 200;
+const EVENT_FOOD_FRENZY_FOOD  = 8;
+const EVENT_FOOD_FRENZY_TICKS = 30;  // duration before extra food is removed
+const EVENT_SPEED_SURGE_TICKS = 20;
+const EVENT_BLACKOUT_TICKS    = 25;
+
+// Power-up weighted pool
+const PU_POOL: PowerUpType[] = [
+  'speed', 'speed', 'speed',
+  'shield', 'shield', 'shield',
+  'magnet', 'magnet',
+  'trim', 'trim',
+  'ghost', 'ghost',
+  'freeze', 'freeze',
+  'bomb',
+];
+
 const DM_OBSTACLES: Vec2[] = [
-  // Centre column — blocks dead-centre forcing players to go around
   { x: 20, y: 12 }, { x: 20, y: 13 }, { x: 20, y: 14 },
   { x: 20, y: 16 }, { x: 20, y: 17 }, { x: 20, y: 18 },
-  // Upper-mid barriers (left & right of centre)
   { x: 14, y: 8  }, { x: 15, y: 8  },
   { x: 25, y: 8  }, { x: 26, y: 8  },
-  // Lower-mid barriers
   { x: 14, y: 22 }, { x: 15, y: 22 },
   { x: 25, y: 22 }, { x: 26, y: 22 },
-  // Inner corner pillars — far enough from spawns
   { x: 13, y: 13 }, { x: 13, y: 14 },
   { x: 27, y: 13 }, { x: 27, y: 14 },
   { x: 13, y: 16 }, { x: 13, y: 17 },
@@ -59,17 +79,16 @@ const COLORS = [
 ];
 
 const START_POSITIONS: Array<{ pos: Vec2; dir: Direction }> = [
-  { pos: { x: 5,       y: 15      }, dir: 'RIGHT' },
-  { pos: { x: 35,      y: 15      }, dir: 'LEFT'  },
-  { pos: { x: 20,      y: 5       }, dir: 'DOWN'  },
-  { pos: { x: 20,      y: 25      }, dir: 'UP'    },
-  { pos: { x: 5,       y: 5       }, dir: 'RIGHT' },
-  { pos: { x: 35,      y: 25      }, dir: 'LEFT'  },
-  { pos: { x: 5,       y: 25      }, dir: 'RIGHT' },
-  { pos: { x: 35,      y: 5       }, dir: 'LEFT'  },
+  { pos: { x: 5,  y: 15 }, dir: 'RIGHT' },
+  { pos: { x: 35, y: 15 }, dir: 'LEFT'  },
+  { pos: { x: 20, y: 5  }, dir: 'DOWN'  },
+  { pos: { x: 20, y: 25 }, dir: 'UP'    },
+  { pos: { x: 5,  y: 5  }, dir: 'RIGHT' },
+  { pos: { x: 35, y: 25 }, dir: 'LEFT'  },
+  { pos: { x: 5,  y: 25 }, dir: 'RIGHT' },
+  { pos: { x: 35, y: 5  }, dir: 'LEFT'  },
 ];
 
-// Deathmatch start positions — opposite corners of 40x30
 const DM_START_POSITIONS: Array<{ pos: Vec2; dir: Direction }> = [
   { pos: { x: 3,  y: 15 }, dir: 'RIGHT' },
   { pos: { x: 36, y: 15 }, dir: 'LEFT'  },
@@ -86,30 +105,43 @@ function broadcast(clients: Iterable<WebSocket>, msg: S2CMessage): void {
   }
 }
 
+function dist(a: Vec2, b: Vec2): number {
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+}
+
 export class GameRoom {
-  id:         string;
-  config:     RoomConfig;
+  id:     string;
+  config: RoomConfig;
+
   private players    = new Map<WebSocket, Snake>();
   private spectators = new Set<WebSocket>();
-  private food:      Vec2[]     = [];
-  private powerUps:  PowerUp[]  = [];
-  private obstacles: Vec2[]     = [];
+  private wsToId     = new Map<WebSocket, string>(); // ws → playerId for chat
+
+  private food:      Vec2[]    = [];
+  private powerUps:  PowerUp[] = [];
+  private obstacles: Vec2[]    = [];
   private tick       = 0;
   private currentTickMs: number = TICK_MS;
   private zone: Zone | undefined;
-  // Per-snake speed-boost ticks remaining
-  private speedBoosts = new Map<string, number>();
-  private timer: NodeJS.Timeout | null = null;
+
+  private speedBoosts = new Map<string, number>(); // snakeId → remaining ticks
+  private timer:          NodeJS.Timeout | null = null;
   private countdownTimer: NodeJS.Timeout | null = null;
   private onDestroy: () => void;
   private creatorWs: WebSocket | null = null;
   private creatorId: string | null    = null;
+
+  // Mid-game event state
+  private activeEvent: { type: GameEventType; remaining: number } | null = null;
+  private nextEventTick = EVENT_INTERVAL_MIN + Math.floor(Math.random() * EVENT_INTERVAL_RNG);
+  private eventFoodCount = 0; // extra food spawned during food_frenzy
+
+  // Per-snake powerup ticks (duplicated in Snake but tracked here too for convenience)
+  // Actually we read from snake directly
+
   status: 'waiting' | 'countdown' | 'playing' | 'finished' = 'waiting';
 
-  private get isDeathmatch(): boolean {
-    return this.config.mode === 'deathmatch';
-  }
-
+  private get isDeathmatch(): boolean { return this.config.mode === 'deathmatch'; }
   private get gridW():  number { return this.isDeathmatch ? DM_GRID_W  : GRID_W;  }
   private get gridH():  number { return this.isDeathmatch ? DM_GRID_H  : GRID_H;  }
   private get tickMs(): number { return this.isDeathmatch ? DM_TICK_MS : TICK_MS; }
@@ -133,8 +165,8 @@ export class GameRoom {
     const id    = uuid();
     const snake = new Snake(id, sp.pos, sp.dir, color, wallet, displayName);
     this.players.set(ws, snake);
+    this.wsToId.set(ws, id);
 
-    // First player is the creator
     if (idx === 0) {
       this.creatorWs = ws;
       this.creatorId = id;
@@ -155,10 +187,9 @@ export class GameRoom {
 
   removeClient(ws: WebSocket): void {
     const snake = this.players.get(ws);
-    if (snake) { snake.die(); this.players.delete(ws); }
+    if (snake) { snake.die(); this.players.delete(ws); this.wsToId.delete(ws); }
     this.spectators.delete(ws);
 
-    // If creator leaves, reassign to next player
     if (ws === this.creatorWs) {
       const next = this.players.keys().next().value as WebSocket | undefined;
       if (next) {
@@ -171,10 +202,7 @@ export class GameRoom {
     }
 
     this.broadcastLobbyState();
-    if (this.players.size === 0) {
-      this.cleanup();
-      this.onDestroy();
-    }
+    if (this.players.size === 0) { this.cleanup(); this.onDestroy(); }
   }
 
   handleMessage(ws: WebSocket, msg: C2SMessage): void {
@@ -188,6 +216,21 @@ export class GameRoom {
       if (this.status !== 'waiting') return;
       if (this.players.size < 1) return;
       this.startCountdown();
+    }
+
+    if (msg.type === 'CHAT') {
+      const snake = this.players.get(ws);
+      const name  = snake?.name ?? 'Spectator';
+      const id    = snake?.id   ?? 'spectator';
+      const text  = String(msg.message).slice(0, 200).trim();
+      if (!text) return;
+      broadcast(this.allClients(), {
+        type:       'CHAT_MESSAGE',
+        playerId:   id,
+        playerName: name,
+        message:    text,
+        timestamp:  Date.now(),
+      });
     }
   }
 
@@ -211,8 +254,11 @@ export class GameRoom {
     this.currentTickMs = this.tickMs;
     this.food = this.spawnFood(this.foodCount);
     if (this.isDeathmatch) {
-      this.zone = { x1: 0, y1: 0, x2: this.gridW - 1, y2: this.gridH - 1 };
+      this.zone     = { x1: 0, y1: 0, x2: this.gridW - 1, y2: this.gridH - 1 };
       this.powerUps = this.spawnPowerUps(DM_POWERUP_COUNT);
+    } else {
+      // Standard mode starts with 1 power-up
+      this.powerUps = this.spawnPowerUps(1);
     }
     const state = this.buildState();
     broadcast(this.allClients(), { type: 'GAME_START', state });
@@ -224,7 +270,7 @@ export class GameRoom {
     this.tick++;
     const snakes = [...this.players.values()].filter(s => s.alive);
 
-    // ── Deathmatch: shrink zone ──────────────────────────────────────────────
+    // ── Deathmatch: shrink zone ───────────────────────────────────────────────
     if (this.isDeathmatch && this.zone && this.tick % DM_ZONE_INTERVAL === 0) {
       const z = this.zone;
       const newZone: Zone = {
@@ -233,13 +279,10 @@ export class GameRoom {
         x2: Math.max(z.x2 - 1, 24),
         y2: Math.max(z.y2 - 1, 19),
       };
-      // Only shrink if zone actually changed
-      if (newZone.x1 <= newZone.x2 && newZone.y1 <= newZone.y2) {
-        this.zone = newZone;
-      }
+      if (newZone.x1 <= newZone.x2 && newZone.y1 <= newZone.y2) this.zone = newZone;
     }
 
-    // ── Deathmatch: speed ramp ───────────────────────────────────────────────
+    // ── Deathmatch: speed ramp ────────────────────────────────────────────────
     if (this.isDeathmatch && this.tick % DM_SPEED_INTERVAL === 0) {
       const newMs = Math.max(this.currentTickMs - DM_SPEED_STEP, DM_SPEED_MIN);
       if (newMs !== this.currentTickMs) {
@@ -249,84 +292,162 @@ export class GameRoom {
       }
     }
 
-    // ── Tick down speed boosts ───────────────────────────────────────────────
+    // ── Standard: periodic power-up spawn ────────────────────────────────────
+    if (!this.isDeathmatch && this.tick % STD_POWERUP_INTERVAL === 0 && this.powerUps.length < STD_MAX_POWERUPS) {
+      this.powerUps.push(...this.spawnPowerUps(1));
+    }
+
+    // ── Tick down speed boosts ────────────────────────────────────────────────
     for (const [id, remaining] of this.speedBoosts) {
       if (remaining <= 1) this.speedBoosts.delete(id);
       else this.speedBoosts.set(id, remaining - 1);
     }
 
-    snakes.forEach(s => s.applyPendingDirection());
+    // ── Tick down per-snake power-up effects ──────────────────────────────────
+    for (const s of snakes) {
+      if (s.ghostTicks  > 0) s.ghostTicks--;
+      if (s.frozenTicks > 0) s.frozenTicks--;
+      if (s.magnetTicks > 0) s.magnetTicks--;
+    }
+
+    // ── Mid-game events ───────────────────────────────────────────────────────
+    if (this.activeEvent) {
+      this.activeEvent.remaining--;
+      if (this.activeEvent.remaining <= 0) {
+        this.activeEvent = null;
+        this.nextEventTick = this.tick + EVENT_INTERVAL_MIN + Math.floor(Math.random() * EVENT_INTERVAL_RNG);
+      }
+    } else if (this.tick >= this.nextEventTick && snakes.length >= 2) {
+      this.triggerRandomEvent(snakes);
+    }
+
+    // ── Frozen snakes don't move ──────────────────────────────────────────────
+    const movingSnakes = snakes.filter(s => s.frozenTicks === 0);
+    movingSnakes.forEach(s => s.applyPendingDirection());
 
     const nextHeads = new Map<Snake, Vec2>();
-    snakes.forEach(s => nextHeads.set(s, s.nextHead()));
+    movingSnakes.forEach(s => nextHeads.set(s, s.nextHead()));
+    // Frozen snakes: "next head" is the current head (they stay put)
+    snakes.filter(s => s.frozenTicks > 0).forEach(s => nextHeads.set(s, { ...s.body[0] }));
 
     const obstacleSet = new Set(this.obstacles.map(o => `${o.x},${o.y}`));
 
-    // Wall collisions
+    // ── Wall collisions ───────────────────────────────────────────────────────
     snakes.forEach(s => {
+      if (s.frozenTicks > 0) return; // frozen snakes can't hit walls mid-freeze
       const h = nextHeads.get(s)!;
       if (h.x < 0 || h.x >= this.gridW || h.y < 0 || h.y >= this.gridH) {
-        s.die();
-        broadcast(this.allClients(), { type: 'PLAYER_DIED', playerId: s.id, cause: 'wall' });
+        this.killSnake(s, 'wall');
       }
     });
 
-    // Obstacle collisions
+    // ── Obstacle collisions ───────────────────────────────────────────────────
     snakes.filter(s => s.alive).forEach(s => {
+      if (s.frozenTicks > 0) return;
       const h = nextHeads.get(s)!;
-      if (obstacleSet.has(`${h.x},${h.y}`)) {
-        s.die();
-        broadcast(this.allClients(), { type: 'PLAYER_DIED', playerId: s.id, cause: 'wall' });
-      }
+      if (obstacleSet.has(`${h.x},${h.y}`)) this.killSnake(s, 'wall');
     });
 
-    // Zone collisions — outside the safe zone = death
+    // ── Zone collisions ───────────────────────────────────────────────────────
     if (this.zone) {
       const z = this.zone;
-      snakes.filter(s => s.alive).forEach(s => {
+      snakes.filter(s => s.alive && s.frozenTicks === 0).forEach(s => {
         const h = nextHeads.get(s)!;
         if (h.x < z.x1 || h.x > z.x2 || h.y < z.y1 || h.y > z.y2) {
-          s.die();
-          broadcast(this.allClients(), { type: 'PLAYER_DIED', playerId: s.id, cause: 'wall' });
+          this.killSnake(s, 'zone');
         }
       });
     }
 
     const alive = snakes.filter(s => s.alive);
 
-    // Power-up collision
+    // ── Power-up collection ───────────────────────────────────────────────────
     const toRemovePowerUps: number[] = [];
     alive.forEach(s => {
       const h = nextHeads.get(s)!;
       this.powerUps.forEach((pu, i) => {
-        if (pu.pos.x === h.x && pu.pos.y === h.y) {
-          toRemovePowerUps.push(i);
-          if (pu.kind === 'speed') {
-            // Speed boost: snake skips every other tick for 10 ticks
+        if (pu.pos.x !== h.x || pu.pos.y !== h.y) return;
+        toRemovePowerUps.push(i);
+        s.magnetTicks = Math.max(s.magnetTicks, 0); // reset so we can track in switch
+
+        switch (pu.kind) {
+          case 'speed':
             this.speedBoosts.set(s.id, 20);
-          } else if (pu.kind === 'trim') {
-            // Trim: cut ALL other snakes' tails by 4 segments
+            break;
+
+          case 'trim':
             for (const other of this.players.values()) {
               if (other.id !== s.id && other.alive && other.body.length > 4) {
                 other.body.splice(other.body.length - 4, 4);
               }
             }
+            break;
+
+          case 'shield':
+            s.shielded = true;
+            break;
+
+          case 'ghost':
+            s.ghostTicks = 15;
+            break;
+
+          case 'freeze':
+            for (const other of this.players.values()) {
+              if (other.id !== s.id && other.alive) {
+                other.frozenTicks = 10;
+              }
+            }
+            break;
+
+          case 'magnet':
+            s.magnetTicks = 15;
+            break;
+
+          case 'bomb': {
+            // Kill all snakes within Manhattan distance 4
+            const bombPos = h;
+            const bombed: Snake[] = [];
+            for (const other of this.players.values()) {
+              if (other.id !== s.id && other.alive && dist(bombPos, other.body[0]) <= 4) {
+                bombed.push(other);
+              }
+            }
+            bombed.forEach(victim => this.killSnake(victim, 'bomb'));
+            s.score += bombed.length * 3; // bonus score per kill
+            break;
           }
         }
       });
     });
-    // Remove collected power-ups and respawn
+
     for (let i = toRemovePowerUps.length - 1; i >= 0; i--) {
       this.powerUps.splice(toRemovePowerUps[i], 1);
     }
-    if (this.isDeathmatch && toRemovePowerUps.length > 0) {
+    // Always respawn collected power-ups
+    if (toRemovePowerUps.length > 0) {
       this.powerUps.push(...this.spawnPowerUps(toRemovePowerUps.length));
     }
 
-    // Food collision
+    // ── Magnet: auto-collect nearby food ─────────────────────────────────────
     const toGrow = new Set<Snake>();
-    alive.forEach(s => {
-      const h = nextHeads.get(s)!;
+    alive.filter(s => s.alive).forEach(s => {
+      const h         = nextHeads.get(s)!;
+      const magnetRange = s.magnetTicks > 0 ? 3 : 0;
+
+      this.food.forEach((f, fi) => {
+        const d = dist(h, f);
+        if (d === 0 || (s.magnetTicks > 0 && d <= magnetRange)) {
+          // eat this food
+          this.food.splice(fi, 1);
+          this.food.push(...this.spawnFood(1));
+          toGrow.add(s);
+        }
+      });
+    });
+
+    // Regular food collision for non-magnet snakes
+    alive.filter(s => s.alive && s.magnetTicks === 0).forEach(s => {
+      const h  = nextHeads.get(s)!;
       const fi = this.food.findIndex(f => f.x === h.x && f.y === h.y);
       if (fi >= 0) {
         this.food.splice(fi, 1);
@@ -335,45 +456,44 @@ export class GameRoom {
       }
     });
 
-    // Self collision
-    alive.forEach(s => {
+    // ── Self collision ────────────────────────────────────────────────────────
+    alive.filter(s => s.alive).forEach(s => {
       const h = nextHeads.get(s)!;
       if (s.body.slice(1).some(seg => seg.x === h.x && seg.y === h.y)) {
-        s.die();
-        broadcast(this.allClients(), { type: 'PLAYER_DIED', playerId: s.id, cause: 'self' });
+        this.killSnake(s, 'self');
       }
     });
 
     const alive2 = alive.filter(s => s.alive);
 
-    // Snake vs snake body collision
+    // ── Snake vs snake body collision (ghost snakes pass through) ─────────────
     alive2.forEach(a => {
+      if (a.ghostTicks > 0) return; // ghost snake passes through bodies
       const h = nextHeads.get(a)!;
       alive2.forEach(b => {
         if (a === b) return;
         if (b.body.some(seg => seg.x === h.x && seg.y === h.y)) {
-          a.die();
-          broadcast(this.allClients(), { type: 'PLAYER_DIED', playerId: a.id, cause: 'snake' });
+          this.killSnake(a, 'snake');
         }
       });
     });
 
-    // Head vs head
+    // ── Head vs head ──────────────────────────────────────────────────────────
     const alive3 = alive2.filter(s => s.alive);
     for (let i = 0; i < alive3.length; i++) {
       for (let j = i + 1; j < alive3.length; j++) {
         const ha = nextHeads.get(alive3[i])!;
         const hb = nextHeads.get(alive3[j])!;
         if (ha.x === hb.x && ha.y === hb.y) {
-          alive3[i].die();
-          alive3[j].die();
-          broadcast(this.allClients(), { type: 'PLAYER_DIED', playerId: alive3[i].id, cause: 'snake' });
-          broadcast(this.allClients(), { type: 'PLAYER_DIED', playerId: alive3[j].id, cause: 'snake' });
+          this.killSnake(alive3[i], 'snake');
+          this.killSnake(alive3[j], 'snake');
         }
       }
     }
 
-    snakes.filter(s => s.alive).forEach(s => s.step(toGrow.has(s)));
+    // ── Step snakes ───────────────────────────────────────────────────────────
+    // Only moving snakes step; frozen snakes stay put
+    movingSnakes.filter(s => s.alive).forEach(s => s.step(toGrow.has(s)));
 
     broadcast(this.allClients(), { type: 'GAME_TICK', state: this.buildState() });
 
@@ -383,40 +503,140 @@ export class GameRoom {
     }
   }
 
+  /** Kill a snake, respecting shield. */
+  private killSnake(s: Snake, cause: 'wall' | 'snake' | 'self' | 'zone' | 'bomb'): void {
+    if (!s.alive) return;
+    if (s.shielded) {
+      s.shielded = false; // shield absorbed the hit
+      return;
+    }
+    s.die();
+    broadcast(this.allClients(), { type: 'PLAYER_DIED', playerId: s.id, victimName: s.name, cause });
+  }
+
+  /** Trigger a random mid-game event. */
+  private triggerRandomEvent(alive: Snake[]): void {
+    const events: GameEventType[] = ['food_frenzy', 'speed_surge', 'blackout'];
+    const type = events[Math.floor(Math.random() * events.length)];
+
+    let duration = EVENT_BLACKOUT_TICKS;
+    let label    = '';
+
+    switch (type) {
+      case 'food_frenzy':
+        duration = EVENT_FOOD_FRENZY_TICKS;
+        label    = '🍎 FOOD FRENZY!';
+        this.eventFoodCount = EVENT_FOOD_FRENZY_FOOD;
+        this.food.push(...this.spawnFood(EVENT_FOOD_FRENZY_FOOD));
+        break;
+
+      case 'speed_surge':
+        duration = EVENT_SPEED_SURGE_TICKS;
+        label    = '⚡ SPEED SURGE!';
+        for (const s of alive) this.speedBoosts.set(s.id, EVENT_SPEED_SURGE_TICKS);
+        break;
+
+      case 'blackout':
+        duration = EVENT_BLACKOUT_TICKS;
+        label    = '🌑 BLACKOUT!';
+        break;
+    }
+
+    this.activeEvent = { type, remaining: duration };
+    broadcast(this.allClients(), { type: 'GAME_EVENT', eventType: type, duration, label });
+  }
+
   private endGame(winner: Snake | null): void {
     if (this.status === 'finished') return;
     this.status = 'finished';
     this.cleanup();
 
-    const totalPot  = this.players.size * this.config.entryFee;
-    const burned    = Math.floor(totalPot * 0.05);
-    const house     = Math.floor(totalPot * 0.03);
-    const pot       = totalPot - burned - house;
+    const totalPot   = this.players.size * this.config.entryFee;
+    const treasury   = Math.floor(totalPot * 0.07);
+    const burned     = Math.floor(totalPot * 0.05);
+    const prizeArena = totalPot - treasury - burned;
+
+    // Win streak
+    const winStreak = winner ? recordWin(winner.wallet) : 0;
+    for (const snake of this.players.values()) {
+      if (!winner || snake.id !== winner.id) resetStreak(snake.wallet);
+    }
 
     broadcast(this.allClients(), {
       type:       'GAME_OVER',
-      winnerId:   winner?.id    ?? null,
-      winnerName: winner?.name  ?? null,
-      pot,
+      winnerId:   winner?.id   ?? null,
+      winnerName: winner?.name ?? null,
+      pot:        prizeArena,
+      potSol:     null,
       burned,
+      winStreak,
     });
 
-    const potDisplay   = (pot    / 1_000_000).toFixed(2);
-    const burnDisplay  = (burned / 1_000_000).toFixed(2);
-    const houseDisplay = (house  / 1_000_000).toFixed(2);
-    logGame(`GAME_OVER winner:${winner?.name ?? 'none'} pot:${potDisplay} ARENA burned:${burnDisplay} ARENA house:${houseDisplay} ARENA players:${this.players.size}`);
+    // Award XP + update challenges + ELO
+    const losers: Array<{ wallet: string; name: string }> = [];
+    for (const snake of this.players.values()) {
+      const isWin = winner?.id === snake.id;
+      awardXP(snake.wallet, snake.name, snake.score, this.tick, isWin);
+      updateChallengeProgress(snake.wallet, {
+        win:     isWin || undefined,
+        score:   snake.score,
+        survive: this.tick,
+        food:    snake.score,
+      });
+      if (!isWin) losers.push({ wallet: snake.wallet, name: snake.name });
+    }
+    if (winner && losers.length > 0) {
+      updateELO(winner.wallet, winner.name, losers);
+    }
 
-    if (isTokenEnabled() && winner && pot > 0) {
-      payWinner(winner.wallet, pot).then(sig => {
-        console.log(`[arena] Paid ${potDisplay} ARENA to ${winner.name} — tx: ${sig}`);
-      }).catch(e => console.error('[arena] payWinner failed:', e));
+    // Challenge rewards (auto-claim)
+    if (isTokenEnabled()) {
+      for (const snake of this.players.values()) {
+        const today      = new Date().toISOString().slice(0, 10);
+        const challenges = getDailyChallenges(today);
+        for (const ch of challenges) {
+          // updateChallengeProgress already recorded progress; check if newly complete
+          const newly = updateChallengeProgress(snake.wallet, {}); // re-check without adding
+          for (const done of newly) {
+            claimChallenge(snake.wallet, done.id);
+            payWinner(snake.wallet, done.reward).catch(() => {});
+            console.log(`[challenge] ${snake.name} completed "${done.description}" → ${done.reward / 1_000_000} ARENA`);
+          }
+        }
+      }
+    }
 
-      burnTokens(burned).then(sig => {
-        console.log(`[arena] Burned ${burnDisplay} ARENA — tx: ${sig}`);
-      }).catch(e => console.error('[arena] burnTokens failed:', e));
+    const arenaDisplay = (prizeArena / 1_000_000).toFixed(2);
+    const burnDisplay  = (burned     / 1_000_000).toFixed(2);
+    const houseDisplay = (treasury   / 1_000_000).toFixed(2);
+    logGame(`GAME_OVER winner:${winner?.name ?? 'none'} prize:${arenaDisplay} ARENA burned:${burnDisplay} ARENA house:${houseDisplay} ARENA players:${this.players.size} streak:${winStreak}`);
 
-      if (process.env.DEV_WALLET_ADDRESS && house > 0) {
-        payWinner(process.env.DEV_WALLET_ADDRESS, house).catch(() => {});
+    if (isTokenEnabled() && winner && prizeArena > 0) {
+      swapArenaForSol(prizeArena).then(async lamports => {
+        if (lamports > 0) {
+          const sig = await payWinnerSol(winner.wallet, lamports);
+          const solDisplay = (lamports / 1e9).toFixed(4);
+          console.log(`[arena] Paid ${solDisplay} SOL to ${winner.name} — tx: ${sig}`);
+          logGame(`PAID_SOL winner:${winner.name} sol:${solDisplay} tx:${sig}`);
+          broadcast(this.allClients(), {
+            type: 'PRIZE_PAID',
+            winnerId: winner.id,
+            solAmount: lamports,
+            txSig: sig,
+          });
+        } else {
+          console.warn('[arena] Swap failed, falling back to ARENA payout');
+          const sig = await payWinner(winner.wallet, prizeArena);
+          console.log(`[arena] Fallback paid ${arenaDisplay} ARENA to ${winner.name} — tx: ${sig}`);
+        }
+      }).catch(e => console.error('[arena] Prize payout failed:', e));
+
+      burnTokens(burned).then(sig =>
+        console.log(`[arena] Burned ${burnDisplay} ARENA — tx: ${sig}`),
+      ).catch(e => console.error('[arena] burnTokens failed:', e));
+
+      if (process.env.DEV_WALLET_ADDRESS && treasury > 0) {
+        payWinner(process.env.DEV_WALLET_ADDRESS, treasury).catch(() => {});
       }
     }
 
@@ -427,7 +647,6 @@ export class GameRoom {
           markRewarded(snake.wallet);
           payWinner(snake.wallet, REFERRAL_BONUS).catch(() => {});
           payWinner(referrer, REFERRAL_BONUS).catch(() => {});
-          console.log(`[referral] Bonus sent: ${snake.name} + referrer ${referrer.slice(0, 8)}…`);
         }
       }
     }
@@ -442,35 +661,27 @@ export class GameRoom {
 
   private spawnFood(count: number): Vec2[] {
     const occupied = new Set<string>();
-    for (const s of this.players.values()) {
-      s.body.forEach(seg => occupied.add(`${seg.x},${seg.y}`));
-    }
+    for (const s of this.players.values()) s.body.forEach(seg => occupied.add(`${seg.x},${seg.y}`));
     this.food.forEach(f => occupied.add(`${f.x},${f.y}`));
     this.powerUps.forEach(p => occupied.add(`${p.pos.x},${p.pos.y}`));
     this.obstacles.forEach(o => occupied.add(`${o.x},${o.y}`));
 
-    const z = this.zone;
+    const z       = this.zone;
     const spawned: Vec2[] = [];
-    let attempts = 0;
+    let attempts  = 0;
     while (spawned.length < count && attempts < 200) {
       attempts++;
-      const x = z
-        ? z.x1 + Math.floor(Math.random() * (z.x2 - z.x1 + 1))
-        : Math.floor(Math.random() * this.gridW);
-      const y = z
-        ? z.y1 + Math.floor(Math.random() * (z.y2 - z.y1 + 1))
-        : Math.floor(Math.random() * this.gridH);
-      const pos = { x, y };
-      if (!occupied.has(`${pos.x},${pos.y}`)) {
-        spawned.push(pos);
-        occupied.add(`${pos.x},${pos.y}`);
+      const x = z ? z.x1 + Math.floor(Math.random() * (z.x2 - z.x1 + 1)) : Math.floor(Math.random() * this.gridW);
+      const y = z ? z.y1 + Math.floor(Math.random() * (z.y2 - z.y1 + 1)) : Math.floor(Math.random() * this.gridH);
+      if (!occupied.has(`${x},${y}`)) {
+        spawned.push({ x, y });
+        occupied.add(`${x},${y}`);
       }
     }
     return spawned;
   }
 
   private spawnPowerUps(count: number): PowerUp[] {
-    const kinds: PowerUpType[] = ['speed', 'trim'];
     const occupied = new Set<string>();
     for (const s of this.players.values()) s.body.forEach(seg => occupied.add(`${seg.x},${seg.y}`));
     this.food.forEach(f => occupied.add(`${f.x},${f.y}`));
@@ -486,7 +697,8 @@ export class GameRoom {
         y: Math.floor(Math.random() * this.gridH),
       };
       if (!occupied.has(`${pos.x},${pos.y}`)) {
-        spawned.push({ pos, kind: kinds[spawned.length % kinds.length] });
+        const kind = PU_POOL[Math.floor(Math.random() * PU_POOL.length)];
+        spawned.push({ pos, kind });
         occupied.add(`${pos.x},${pos.y}`);
       }
     }
@@ -497,22 +709,27 @@ export class GameRoom {
     return {
       tick:      this.tick,
       snakes:    [...this.players.values()].map(s => ({
-        id:     s.id,
-        body:   s.body,
-        dir:    s.dir,
-        alive:  s.alive,
-        score:  s.score,
-        color:  s.color,
-        wallet: s.wallet,
-        name:   s.name,
+        id:          s.id,
+        body:        s.body,
+        dir:         s.dir,
+        alive:       s.alive,
+        score:       s.score,
+        color:       s.color,
+        wallet:      s.wallet,
+        name:        s.name,
+        shielded:    s.shielded    || undefined,
+        ghostTicks:  s.ghostTicks  || undefined,
+        frozenTicks: s.frozenTicks || undefined,
+        magnetTicks: s.magnetTicks || undefined,
       })),
-      food:      this.food,
-      powerUps:  this.powerUps,
-      obstacles: this.obstacles,
-      gridW:     this.gridW,
-      gridH:     this.gridH,
-      status:    this.status,
-      zone:      this.zone,
+      food:        this.food,
+      powerUps:    this.powerUps,
+      obstacles:   this.obstacles,
+      gridW:       this.gridW,
+      gridH:       this.gridH,
+      status:      this.status,
+      zone:        this.zone,
+      activeEvent: this.activeEvent?.type ?? null,
     };
   }
 

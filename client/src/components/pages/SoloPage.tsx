@@ -5,7 +5,7 @@ import { Page } from '../../types';
 import { useSoloGame, SOLO_W, SOLO_H, SoloPowerUpType } from '../../hooks/useSoloGame';
 import { useGameLoop } from '../../hooks/useGameLoop';
 import { buildEntryPaymentTx, isArenaConfigured, ARENA_DECIMALS } from '../../lib/token';
-import { startMusic, stopMusic, playSfx, setMuted, isMuted } from '../../lib/audio';
+import { playSfx } from '../../lib/audio';
 import Button from '../ui/Button';
 
 const CELL = 20;
@@ -55,8 +55,6 @@ export default function SoloPage({ navigate }: Props) {
   const [pickupFlash, setPickupFlash] = useState<string | null>(null);
   const [levelFlash, setLevelFlash]   = useState(false);
   const [countdown, setCountdown]     = useState<number | null>(null);
-  const [muted, setMutedState]        = useState(isMuted());
-
   // Particles: [x, y, vx, vy, life, color]
   const particlesRef = useRef<[number,number,number,number,number,string][]>([]);
   const animFrameRef = useRef<number | null>(null);
@@ -74,19 +72,6 @@ export default function SoloPage({ navigate }: Props) {
   );
   useGameLoop(handleDirection);
 
-  // Music
-  useEffect(() => {
-    if (state.alive) startMusic('battle');
-    else stopMusic();
-  }, [state.alive]);
-
-  useEffect(() => () => stopMusic(), []);
-
-  function toggleMute() {
-    const next = !muted;
-    setMutedState(next);
-    setMuted(next);
-  }
 
   // Fetch leaderboard on mount and after score submit
   const fetchLeaderboard = useCallback(async () => {
@@ -459,9 +444,6 @@ export default function SoloPage({ navigate }: Props) {
           {countdown !== null && (
             <span className="text-sm font-mono font-bold text-[#ffd54f] px-2">Starting in {countdown}...</span>
           )}
-          <button onClick={toggleMute} className="text-xs font-mono px-2 py-1 rounded border border-[#1a2840] text-gray-400 hover:text-white transition-colors">
-            {muted ? '🔇' : '🔊'}
-          </button>
           <Button size="sm" variant="ghost" onClick={() => navigate({ name: 'landing' })}>EXIT</Button>
         </div>
       </div>

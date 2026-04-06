@@ -3,8 +3,6 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { Page } from '../../types';
 import Button from '../ui/Button';
 import { useReferral } from '../../hooks/useReferral';
-import { startMusic, stopMusic, setMuted, isMuted } from '../../lib/audio';
-
 interface Props {
   navigate: (p: Page) => void;
 }
@@ -13,20 +11,6 @@ export default function LandingPage({ navigate }: Props) {
   const { publicKey }       = useWallet();
   const { getReferralLink } = useReferral();
   const [copied, setCopied] = useState(false);
-  const [muted, setMutedState] = useState(isMuted());
-
-  // Start landing music on first click (browser autoplay policy)
-  useEffect(() => {
-    const start = () => { startMusic('landing'); document.removeEventListener('click', start); };
-    document.addEventListener('click', start);
-    return () => { stopMusic(); document.removeEventListener('click', start); };
-  }, []);
-
-  function toggleMute() {
-    const next = !muted;
-    setMutedState(next);
-    setMuted(next);
-  }
 
   function handleCopy() {
     navigator.clipboard.writeText(getReferralLink()).then(() => {
@@ -49,14 +33,6 @@ export default function LandingPage({ navigate }: Props) {
 
       {/* Glow blob */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#00e5ff]/5 blur-3xl pointer-events-none" />
-
-      {/* Mute button */}
-      <button
-        onClick={toggleMute}
-        className="absolute top-4 right-4 z-20 text-lg px-3 py-1 rounded border border-[#1a2840] bg-[#0b1120] text-gray-400 hover:text-white hover:border-[#00e5ff] transition-colors font-mono text-xs"
-      >
-        {muted ? '🔇 MUTED' : '🔊 MUSIC'}
-      </button>
 
       <div className="relative z-10 flex flex-col items-center gap-6 text-center">
         <p className="text-xs font-mono tracking-[0.4em] text-[#9c6bff] uppercase">

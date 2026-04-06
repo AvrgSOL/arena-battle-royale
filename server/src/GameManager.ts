@@ -89,10 +89,28 @@ export class GameManager {
       }
 
       case 'DIRECTION':
-      case 'START_GAME': {
+      case 'START_GAME':
+      case 'CHAT': {
         const roomId = this.wsToRoom.get(ws);
-        if (!roomId) return;
-        this.rooms.get(roomId)?.handleMessage(ws, msg);
+        if (roomId) {
+          this.rooms.get(roomId)?.handleMessage(ws, msg);
+        } else if (msg.type === 'CHAT') {
+          // Lobby-wide chat
+          const text = String(msg.message).slice(0, 200).trim();
+          if (!text) return;
+          const chatMsg: import('./types').S2CMessage = {
+            type:       'CHAT_MESSAGE',
+            playerId:   'lobby',
+            playerName: 'Lobby',
+            message:    text,
+            timestamp:  Date.now(),
+            isLobby:    true,
+          };
+          const str = JSON.stringify(chatMsg);
+          for (const c of this.lobbyConns) {
+            if (c.readyState === WebSocket.OPEN) c.send(str);
+          }
+        }
         break;
       }
 

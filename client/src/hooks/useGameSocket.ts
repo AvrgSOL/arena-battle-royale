@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { RoomSummary, GameState, LobbyPlayer, GameOverPayload } from '../types';
+import { RoomSummary, GameState, LobbyPlayer, GameOverPayload, ChatMessage, KillFeedEntry, GameEventPayload } from '../types';
 import { Direction } from '../types';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:3002';
@@ -12,29 +12,34 @@ type C2SMessage =
   | { type: 'START_GAME' }
   | { type: 'GET_ROOMS' }
   | { type: 'GET_ROOM';    roomId: string }
-  | { type: 'LEAVE' };
+  | { type: 'LEAVE' }
+  | { type: 'CHAT'; message: string };
 
 export interface UseGameSocketReturn {
-  rooms:        RoomSummary[];
-  gameState:    GameState | null;
-  lobbyPlayers: LobbyPlayer[];
+  rooms:          RoomSummary[];
+  gameState:      GameState | null;
+  lobbyPlayers:   LobbyPlayer[];
   lobbyCountdown: number | null;
-  gameOver:     GameOverPayload | null;
-  playerId:     string | null;
-  playerColor:  string | null;
-  isCreator:     boolean;
-  inviteRoom:    RoomSummary | null;
-  currentRoomId: string | null;
-  connected:    boolean;
-  sendMessage:  (msg: C2SMessage) => void;
-  joinRoom:     (roomId: string, displayName: string, walletAddress: string, txSig?: string) => void;
-  createRoom:   (name: string, entryFee: number, maxPlayers: number, walletAddress: string, displayName: string, txSig?: string, mode?: 'standard' | 'deathmatch', isPrivate?: boolean) => void;
-  sendDirection:(dir: Direction) => void;
-  startGame:    () => void;
-  getRooms:     () => void;
-  getRoom:      (roomId: string) => void;
-  leaveRoom:    () => void;
-  spectateRoom: (roomId: string) => void;
+  gameOver:       GameOverPayload | null;
+  playerId:       string | null;
+  playerColor:    string | null;
+  isCreator:      boolean;
+  inviteRoom:     RoomSummary | null;
+  currentRoomId:  string | null;
+  connected:      boolean;
+  chatMessages:   ChatMessage[];
+  killFeed:       KillFeedEntry[];
+  activeEvent:    GameEventPayload | null;
+  sendMessage:    (msg: C2SMessage) => void;
+  sendChat:       (message: string) => void;
+  joinRoom:       (roomId: string, displayName: string, walletAddress: string, txSig?: string) => void;
+  createRoom:     (name: string, entryFee: number, maxPlayers: number, walletAddress: string, displayName: string, txSig?: string, mode?: 'standard' | 'deathmatch', isPrivate?: boolean) => void;
+  sendDirection:  (dir: Direction) => void;
+  startGame:      () => void;
+  getRooms:       () => void;
+  getRoom:        (roomId: string) => void;
+  leaveRoom:      () => void;
+  spectateRoom:   (roomId: string) => void;
 }
 
 export function useGameSocket(): UseGameSocketReturn {
@@ -54,6 +59,10 @@ export function useGameSocket(): UseGameSocketReturn {
   const [isCreator,      setIsCreator]      = useState(false);
   const [inviteRoom,     setInviteRoom]     = useState<RoomSummary | null>(null);
   const [currentRoomId,  setCurrentRoomId]  = useState<string | null>(null);
+  const [chatMessages,   setChatMessages]   = useState<ChatMessage[]>([]);
+  const [killFeed,       setKillFeed]       = useState<KillFeedEntry[]>([]);
+  const [activeEvent,    setActiveEvent]    = useState<GameEventPayload | null>(null);
+  const eventTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connect = useCallback(() => {
     if (isUnmounted.current) return;
@@ -101,15 +110,38 @@ export function useGameSocket(): UseGameSocketReturn {
           setGameState(msg.state);
           break;
         case 'PLAYER_DIED':
-          // state will be updated via next GAME_TICK
+          setKillFeed(prev => [
+            { id: crypto.randomUUID(), victimName: msg.victimName, cause: msg.cause, timestamp: Date.now() },
+            ...prev.slice(0, 7),
+          ]);
           break;
         case 'GAME_OVER':
           setGameOver({
             winnerId:   msg.winnerId,
             winnerName: msg.winnerName,
             pot:        msg.pot,
+            potSol:     msg.potSol ?? null,
             burned:     msg.burned,
+            winStreak:  msg.winStreak ?? 0,
           });
+          setActiveEvent(null);
+          break;
+        case 'PRIZE_PAID':
+          setGameOver(prev => prev ? { ...prev, potSol: msg.solAmount } : prev);
+          break;
+        case 'CHAT_MESSAGE':
+          setChatMessages(prev => [...prev.slice(-99), {
+            playerId:   msg.playerId,
+            playerName: msg.playerName,
+            message:    msg.message,
+            timestamp:  msg.timestamp,
+            isLobby:    msg.isLobby,
+          }]);
+          break;
+        case 'GAME_EVENT':
+          setActiveEvent({ eventType: msg.eventType, duration: msg.duration, label: msg.label });
+          if (eventTimerRef.current) clearTimeout(eventTimerRef.current);
+          eventTimerRef.current = setTimeout(() => setActiveEvent(null), msg.duration * 150 + 500);
           break;
         case 'ERROR':
           console.error('[Arena WS] server error:', msg.message);
@@ -190,6 +222,10 @@ export function useGameSocket(): UseGameSocketReturn {
     sendMessage({ type: 'GET_ROOM', roomId });
   }, [sendMessage]);
 
+  const sendChat = useCallback((message: string) => {
+    sendMessage({ type: 'CHAT', message });
+  }, [sendMessage]);
+
   const leaveRoom = useCallback(() => {
     sendMessage({ type: 'LEAVE' });
     setGameState(null);
@@ -200,6 +236,8 @@ export function useGameSocket(): UseGameSocketReturn {
     setPlayerColor(null);
     setIsCreator(false);
     setCurrentRoomId(null);
+    setKillFeed([]);
+    setActiveEvent(null);
     playerIdRef.current = null;
   }, [sendMessage]);
 
@@ -219,7 +257,11 @@ export function useGameSocket(): UseGameSocketReturn {
     inviteRoom,
     currentRoomId,
     connected,
+    chatMessages,
+    killFeed,
+    activeEvent,
     sendMessage,
+    sendChat,
     joinRoom,
     createRoom,
     sendDirection,

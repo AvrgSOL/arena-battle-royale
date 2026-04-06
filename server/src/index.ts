@@ -10,6 +10,9 @@ import { STORE_ITEMS, getOwnedItems, grantItem, verifyStorePurchase } from './st
 import { recordReferral } from './referrals';
 import { submitSoloScore, getWeeklyTop, getWeeklyPool, getPrizeBreakdown, currentWeek, ENTRY_FEE_BASE } from './soloLeaderboard';
 import { verifyEntryPayment } from './token';
+import { getXP, getTopXP, xpToNextLevel, getLevelTitle } from './xp';
+import { getDailyChallenges, getChallengeProgress } from './challenges';
+import { getTopRanked, getRankEntry, TIERS } from './ranking';
 
 const PORT = parseInt(process.env.PORT ?? '3002', 10);
 const manager = new GameManager();
@@ -276,6 +279,57 @@ const httpServer = http.createServer(async (req, res) => {
       res.writeHead(500);
       res.end(JSON.stringify({ error: 'Internal server error' }));
     }
+    return;
+  }
+
+  // ── XP / Levels ─────────────────────────────────────────────────────────
+  const xpWalletMatch = url.match(/^\/api\/xp\/(.+)$/);
+  if (xpWalletMatch && req.method === 'GET') {
+    const wallet = decodeURIComponent(xpWalletMatch[1]);
+    const entry  = getXP(wallet);
+    if (entry) {
+      const progress = xpToNextLevel(entry.xp);
+      res.end(JSON.stringify({ ...entry, ...progress, title: getLevelTitle(entry.level) }));
+    } else {
+      res.end(JSON.stringify({ wallet, xp: 0, level: 0, current: 0, needed: 100, gamesPlayed: 0, wins: 0, title: 'Rookie' }));
+    }
+    return;
+  }
+
+  if (url === '/api/xp/top' && req.method === 'GET') {
+    res.end(JSON.stringify(getTopXP(50).map(e => ({
+      ...e,
+      title: getLevelTitle(e.level),
+    }))));
+    return;
+  }
+
+  // ── Daily Challenges ─────────────────────────────────────────────────────
+  if (url === '/api/challenges' && req.method === 'GET') {
+    res.end(JSON.stringify(getDailyChallenges()));
+    return;
+  }
+
+  const challengeProgressMatch = url.match(/^\/api\/challenges\/progress\/(.+)$/);
+  if (challengeProgressMatch && req.method === 'GET') {
+    const wallet   = decodeURIComponent(challengeProgressMatch[1]);
+    const prog     = getChallengeProgress(wallet);
+    const today    = getDailyChallenges();
+    res.end(JSON.stringify({ challenges: today, progress: prog }));
+    return;
+  }
+
+  // ── ELO Rankings ─────────────────────────────────────────────────────────
+  if (url === '/api/rankings' && req.method === 'GET') {
+    res.end(JSON.stringify({ rankings: getTopRanked(50), tiers: TIERS }));
+    return;
+  }
+
+  const rankWalletMatch = url.match(/^\/api\/rankings\/(.+)$/);
+  if (rankWalletMatch && req.method === 'GET') {
+    const wallet = decodeURIComponent(rankWalletMatch[1]);
+    const entry  = getRankEntry(wallet);
+    res.end(JSON.stringify(entry ?? { wallet, elo: 1000, tier: 'Bronze', wins: 0, losses: 0 }));
     return;
   }
 
