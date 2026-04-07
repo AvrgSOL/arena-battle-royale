@@ -3,13 +3,24 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { Page } from '../../types';
 import Button from '../ui/Button';
 import { useReferral } from '../../hooks/useReferral';
+import { useTokenStats } from '../../hooks/useTokenStats';
+
+const PUMP_URL = import.meta.env.VITE_PUMP_URL as string | undefined;
 interface Props {
   navigate: (p: Page) => void;
+}
+
+function fmtUsd(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000)     return `$${(n / 1_000).toFixed(2)}K`;
+  if (n < 0.01)       return `$${n.toFixed(8)}`;
+  return `$${n.toFixed(4)}`;
 }
 
 export default function LandingPage({ navigate }: Props) {
   const { publicKey }       = useWallet();
   const { getReferralLink } = useReferral();
+  const { stats }           = useTokenStats();
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -96,6 +107,52 @@ export default function LandingPage({ navigate }: Props) {
             </div>
           ))}
         </div>
+
+        {/* ARENA Token CTA */}
+        {PUMP_URL && (
+          <div className="mt-8 w-full max-w-md border border-[#00e5ff]/20 rounded-lg bg-[#00e5ff]/5 px-5 py-5 text-center relative overflow-hidden">
+            {/* glow */}
+            <div className="absolute inset-0 bg-[#00e5ff]/3 blur-xl pointer-events-none" />
+            <div className="relative z-10">
+              <p className="text-[10px] font-mono tracking-[0.4em] text-[#9c6bff] uppercase mb-1">
+                {stats && !stats.graduated ? '🌊 Live on Pump.fun' : '✅ Live on Raydium'}
+              </p>
+              <p className="text-2xl font-extrabold text-[#00e5ff] font-mono tracking-widest mb-1">
+                $ARENA
+              </p>
+              {stats && (
+                <div className="flex justify-center gap-6 text-xs font-mono mb-4">
+                  <div>
+                    <div className="text-white font-bold">{fmtUsd(stats.price)}</div>
+                    <div className="text-gray-500">Price</div>
+                  </div>
+                  <div>
+                    <div className="text-white font-bold">
+                      {fmtUsd(stats.marketCap > 0 ? stats.marketCap : stats.price * stats.totalSupply)}
+                    </div>
+                    <div className="text-gray-500">Market Cap</div>
+                  </div>
+                  <div>
+                    <div className="text-[#00ff88] font-bold">1B</div>
+                    <div className="text-gray-500">Supply</div>
+                  </div>
+                </div>
+              )}
+              <p className="text-xs text-gray-400 font-mono mb-4">
+                Win games → earn ARENA.<br />
+                Entry fees fund the prize pool.
+              </p>
+              <a
+                href={PUMP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block px-6 py-2.5 rounded font-bold text-sm font-mono tracking-widest bg-[#00e5ff] text-[#080d1a] hover:bg-[#00e5ff]/90 transition-colors"
+              >
+                BUY $ARENA ↗
+              </a>
+            </div>
+          </div>
+        )}
 
         {/* Refer & Earn */}
         {publicKey && (

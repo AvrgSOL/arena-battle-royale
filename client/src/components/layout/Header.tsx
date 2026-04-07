@@ -1,6 +1,8 @@
 import '@solana/wallet-adapter-react-ui/styles.css';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
+const PUMP_URL = import.meta.env.VITE_PUMP_URL as string | undefined;
+
 interface Props {
   onNavigate?: (page: string) => void;
 }
@@ -36,6 +38,16 @@ export default function Header({ onNavigate }: Props) {
             >
               Leaderboard
             </button>
+            {PUMP_URL && (
+              <a
+                href={PUMP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-mono tracking-widest px-3 py-1.5 rounded border border-[#00e5ff]/40 text-[#00e5ff] hover:bg-[#00e5ff]/10 transition-colors uppercase animate-pulse"
+              >
+                Buy ARENA
+              </a>
+            )}
           </nav>
         )}
       </div>

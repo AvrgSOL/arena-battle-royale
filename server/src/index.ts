@@ -26,6 +26,8 @@ interface TokenStatsPayload {
   burned: number;
   burnedPct: number;
   circulatingSupply: number;
+  marketCap: number;
+  graduated: boolean; // false = still on pump.fun bonding curve
 }
 
 let tokenStatsCache: TokenStatsPayload | null = null;
@@ -46,44 +48,93 @@ async function fetchTokenStats(): Promise<TokenStatsPayload> {
       burned:            12_500_000,
       burnedPct:         1.25,
       circulatingSupply: 900_000_000,
+      marketCap:         9_875,
+      graduated:         false,
     };
   }
 
+  // ── Try pump.fun API first (works on bonding curve AND after graduation) ───
+  try {
+    const pumpRes  = await fetch(`https://frontend-api.pump.fun/coins/${mintAddress}`);
+    if (pumpRes.ok) {
+      const p = await pumpRes.json() as any;
+      const totalSupply = 1_000_000_000; // pump.fun tokens are always 1B
+      const price       = p.usd_market_cap ? p.usd_market_cap / totalSupply : 0;
+      const marketCap   = p.usd_market_cap ?? 0;
+      const graduated   = !!p.complete;
+
+      if (!graduated) {
+        // Still on bonding curve — pump.fun data is authoritative
+        return {
+          price,
+          priceChange24h:    0,
+          totalSupply,
+          burned:            0,
+          burnedPct:         0,
+          circulatingSupply: totalSupply,
+          marketCap,
+          graduated:         false,
+        };
+      }
+
+      // Graduated — get accurate Jupiter price but keep pump.fun supply info
+      let jupiterPrice       = price;
+      let priceChange24h = 0;
+      try {
+        const priceRes  = await fetch(`https://lite-api.jup.ag/price/v2?ids=${mintAddress}`);
+        const priceJson = await priceRes.json() as any;
+        const priceData = priceJson?.data?.[mintAddress];
+        jupiterPrice    = parseFloat(priceData?.price ?? String(price));
+        priceChange24h  = parseFloat(priceData?.priceChange24h ?? '0');
+      } catch { /* use pump.fun price */ }
+
+      // Get on-chain supply for burn tracking
+      const rpc  = process.env.SOLANA_RPC ?? 'https://api.mainnet-beta.solana.com';
+      const conn = new Connection(rpc, 'confirmed');
+      const mintInfo    = await getMint(conn, new PublicKey(mintAddress));
+      const currentBase = Number(mintInfo.supply);
+      const burned      = Math.max(0, INITIAL_SUPPLY_BASE - currentBase);
+
+      return {
+        price:             jupiterPrice,
+        priceChange24h,
+        totalSupply:       currentBase / 1_000_000,
+        burned:            burned / 1_000_000,
+        burnedPct:         (burned / INITIAL_SUPPLY_BASE) * 100,
+        circulatingSupply: currentBase / 1_000_000,
+        marketCap:         jupiterPrice * (currentBase / 1_000_000),
+        graduated:         true,
+      };
+    }
+  } catch { /* fall through to Jupiter-only path */ }
+
+  // ── Fallback: Jupiter only (if pump.fun API is down) ─────────────────────
   const rpc  = process.env.SOLANA_RPC ?? 'https://api.mainnet-beta.solana.com';
   const conn = new Connection(rpc, 'confirmed');
-  const mint = new PublicKey(mintAddress);
-
-  const mintInfo    = await getMint(conn, mint);
+  const mintInfo    = await getMint(conn, new PublicKey(mintAddress));
   const currentBase = Number(mintInfo.supply);
   const burned      = Math.max(0, INITIAL_SUPPLY_BASE - currentBase);
-  const burnedPct   = (burned / INITIAL_SUPPLY_BASE) * 100;
+  const totalSupply = currentBase / 1_000_000;
 
-  const totalSupply       = currentBase / 1_000_000;
-  const burnedDisplay     = burned     / 1_000_000;
-  const circulatingSupply = totalSupply; // approximation without treasury fetch
-
-  // Jupiter price
   let price         = 0;
   let priceChange24h = 0;
   try {
-    const priceRes  = await fetch(
-      `https://lite-api.jup.ag/price/v2?ids=${mintAddress}`,
-    );
+    const priceRes  = await fetch(`https://lite-api.jup.ag/price/v2?ids=${mintAddress}`);
     const priceJson = await priceRes.json() as any;
     const priceData = priceJson?.data?.[mintAddress];
     price          = parseFloat(priceData?.price ?? '0');
     priceChange24h = parseFloat(priceData?.priceChange24h ?? '0');
-  } catch {
-    // leave price at 0
-  }
+  } catch { /* leave at 0 */ }
 
   return {
     price,
     priceChange24h,
     totalSupply,
-    burned:            burnedDisplay,
-    burnedPct,
-    circulatingSupply,
+    burned:            burned / 1_000_000,
+    burnedPct:         (burned / INITIAL_SUPPLY_BASE) * 100,
+    circulatingSupply: totalSupply,
+    marketCap:         price * totalSupply,
+    graduated:         true,
   };
 }
 

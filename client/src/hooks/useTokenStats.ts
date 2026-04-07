@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 
 export interface TokenStats {
-  price: number;             // USD price
-  priceChange24h: number;    // % change
-  totalSupply: number;       // current (after burns), display units
-  burned: number;            // total burned tokens (display units)
-  burnedPct: number;         // % of supply burned
-  circulatingSupply: number; // totalSupply - treasury balance, display units
+  price: number;
+  priceChange24h: number;
+  totalSupply: number;
+  burned: number;
+  burnedPct: number;
+  circulatingSupply: number;
+  marketCap: number;
+  graduated: boolean;
 }
 
 const API_URL = `${import.meta.env.VITE_API_URL ?? 'http://localhost:3002'}/api/token/stats`;
