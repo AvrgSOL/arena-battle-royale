@@ -73,6 +73,11 @@ export default function SoloPage({ navigate }: Props) {
   );
   useGameLoop(handleDirection);
 
+  const handleShareX = useCallback(() => {
+    const text = `just got cracked on arenaroyal.gg 💀 high score: ${state.highScore} #ArenaRoyale`;
+    window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  }, [state.highScore]);
+
 
   // Fetch leaderboard on mount and after score submit
   const fetchLeaderboard = useCallback(async () => {
@@ -444,6 +449,15 @@ export default function SoloPage({ navigate }: Props) {
           )}
           {countdown !== null && (
             <span className="text-sm font-mono font-bold text-[#ffd54f] px-2">Starting in {countdown}...</span>
+          )}
+          {!state.alive && state.started && (
+            <button
+              onClick={handleShareX}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono font-bold bg-black text-white border border-white/20 hover:bg-white/10 transition-colors"
+            >
+              <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.912-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              SHARE
+            </button>
           )}
           <Button size="sm" variant="ghost" onClick={() => navigate({ name: 'landing' })}>EXIT</Button>
         </div>

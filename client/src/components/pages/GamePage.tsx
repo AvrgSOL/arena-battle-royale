@@ -277,6 +277,16 @@ export default function GamePage({ navigate, addToast }: Props) {
   const aliveCount = gameState?.snakes.filter(s => s.alive).length ?? 0;
   const mySnake    = gameState?.snakes.find(s => s.id === playerId);
 
+  // Track final score for share button
+  const lastScoreRef = useRef(0);
+  if (mySnake?.score != null) lastScoreRef.current = mySnake.score;
+
+  const handleShareX = useCallback(() => {
+    const score = lastScoreRef.current;
+    const text = `just got cracked on arenaroyal.gg 💀 scored ${score} #ArenaRoyale`;
+    window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  }, []);
+
   const streakMsg = gameOver?.winStreak && gameOver.winStreak >= 2
     ? (STREAK_MESSAGES[gameOver.winStreak] ?? `${gameOver.winStreak}x WIN STREAK!`)
     : null;
@@ -399,6 +409,13 @@ export default function GamePage({ navigate, addToast }: Props) {
               </div>
             </div>
 
+            <button
+              onClick={handleShareX}
+              className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded font-mono text-sm font-bold bg-black text-white border border-white/20 hover:bg-white/10 transition-colors"
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.912-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              SHARE ON X
+            </button>
             <Button variant="primary" onClick={handleLeave} className="mt-2 w-full">
               BACK TO LOBBY
             </Button>
