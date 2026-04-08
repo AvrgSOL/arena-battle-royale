@@ -12,6 +12,7 @@ import {
   SolflareWalletAdapter,
 } from '@solana/wallet-adapter-wallets';
 
+import { Analytics } from '@vercel/analytics/react';
 import '@solana/wallet-adapter-react-ui/styles.css';
 import './index.css';
 import App from './App';
@@ -42,5 +43,6 @@ function Root() {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Root />
+    <Analytics />
   </StrictMode>,
 );
