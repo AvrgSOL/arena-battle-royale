@@ -283,7 +283,7 @@ export default function GamePage({ navigate, addToast }: Props) {
 
   const handleShareX = useCallback(() => {
     const score = lastScoreRef.current;
-    const text = `just got cracked on arenaroyal.gg 💀 scored ${score} #ArenaRoyale`;
+    const text = `just got cracked on arenaroyal.gg 💀 scored ${score} #arenaroyale.gg`;
     window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
   }, []);
 

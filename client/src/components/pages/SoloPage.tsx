@@ -74,7 +74,7 @@ export default function SoloPage({ navigate }: Props) {
   useGameLoop(handleDirection);
 
   const handleShareX = useCallback(() => {
-    const text = `just got cracked on arenaroyal.gg 💀 high score: ${state.highScore} #ArenaRoyale`;
+    const text = `just got cracked on arenaroyal.gg 💀 high score: ${state.highScore} #arenaroyale.gg`;
     window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
   }, [state.highScore]);
 
