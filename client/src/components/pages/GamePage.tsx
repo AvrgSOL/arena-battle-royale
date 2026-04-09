@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { Page } from '../../types';
 import { useSocket } from '../../context/GameSocketContext';
 import { useGameLoop } from '../../hooks/useGameLoop';
@@ -71,6 +71,11 @@ export default function GamePage({ navigate, addToast }: Props) {
   } = useSocket();
 
   const { owned } = useStore();
+
+  // Track final score so it's available after the snake is removed from state
+  const [finalScore, setFinalScore] = useState(0);
+  const mySnakeScore = gameState?.snakes.find(s => s.id === playerId)?.score ?? 0;
+  useEffect(() => { if (mySnakeScore > 0) setFinalScore(mySnakeScore); }, [mySnakeScore]);
 
   const handleDirection = useCallback(
     (dir: Parameters<typeof sendDirection>[0]) => sendDirection(dir),
@@ -399,7 +404,27 @@ export default function GamePage({ navigate, addToast }: Props) {
               </div>
             </div>
 
-            <Button variant="primary" onClick={handleLeave} className="mt-2 w-full">
+            {/* Twitter share button */}
+            {(() => {
+              const isWinner = gameOver.winnerId === playerId;
+              const potSol   = gameOver.potSol != null ? (gameOver.potSol / 1e9).toFixed(4) : null;
+              const text     = isWinner
+                ? `🏆 Just won an ARENA Battle Royale on Solana! Score: ${finalScore}${potSol ? ` · Prize: ${potSol} SOL` : ''} · Last snake standing wins the pot 🐍⚔️ $ARENA`
+                : `⚔️ Just got eliminated in ARENA Battle Royale on Solana. Score: ${finalScore}. Can you survive? 🐍 $ARENA`;
+              const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://arenaroyale.gg')}`;
+              return (
+                <a
+                  href={tweetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded border border-[#1d9bf0]/40 bg-[#1d9bf0]/10 text-[#1d9bf0] font-mono text-sm font-bold hover:bg-[#1d9bf0]/20 transition-colors"
+                >
+                  𝕏 SHARE ON TWITTER
+                </a>
+              );
+            })()}
+
+            <Button variant="primary" onClick={handleLeave} className="w-full">
               BACK TO LOBBY
             </Button>
           </div>
