@@ -334,6 +334,15 @@ const httpServer = http.createServer(async (req, res) => {
   }
 
   // ── XP / Levels ─────────────────────────────────────────────────────────
+  // NOTE: /api/xp/top must be checked BEFORE the wallet pattern to avoid "top" being treated as a wallet
+  if (url === '/api/xp/top' && req.method === 'GET') {
+    res.end(JSON.stringify(getTopXP(50).map(e => ({
+      ...e,
+      title: getLevelTitle(e.level),
+    }))));
+    return;
+  }
+
   const xpWalletMatch = url.match(/^\/api\/xp\/(.+)$/);
   if (xpWalletMatch && req.method === 'GET') {
     const wallet = decodeURIComponent(xpWalletMatch[1]);
@@ -344,14 +353,6 @@ const httpServer = http.createServer(async (req, res) => {
     } else {
       res.end(JSON.stringify({ wallet, xp: 0, level: 0, current: 0, needed: 100, gamesPlayed: 0, wins: 0, title: 'Rookie' }));
     }
-    return;
-  }
-
-  if (url === '/api/xp/top' && req.method === 'GET') {
-    res.end(JSON.stringify(getTopXP(50).map(e => ({
-      ...e,
-      title: getLevelTitle(e.level),
-    }))));
     return;
   }
 
