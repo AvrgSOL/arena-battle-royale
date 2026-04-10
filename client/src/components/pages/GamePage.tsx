@@ -199,8 +199,8 @@ export default function GamePage({ navigate, addToast }: Props) {
       const isShielded    = snake.shielded;
 
       const trailLen = applyTrail ? 5 : 1;
-      // Opponents are dimmed so your snake stands out
-      const opponentDim = (!isLocalPlayer && snake.alive) ? 0.55 : 1.0;
+      // Opponents heavily dimmed; your snake stays full brightness
+      const opponentDim = (!isLocalPlayer && snake.alive) ? 0.35 : 1.0;
 
       snake.body.forEach((seg, i) => {
         // Ghost: draw translucent
@@ -224,10 +224,6 @@ export default function GamePage({ navigate, addToast }: Props) {
         if (applySkin) {
           ctx.shadowColor = snake.color;
           ctx.shadowBlur  = 8;
-        } else if (isLocalPlayer && snake.alive) {
-          // Your snake always glows so it's easy to spot
-          ctx.shadowColor = snake.color;
-          ctx.shadowBlur  = 10;
         } else if (isShielded && snake.alive) {
           ctx.shadowColor = '#00e5ff';
           ctx.shadowBlur  = 12;
@@ -237,12 +233,12 @@ export default function GamePage({ navigate, addToast }: Props) {
 
         ctx.fillRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
 
-        // Bright white outline on your snake's head
-        if (i === 0 && isLocalPlayer && snake.alive) {
-          ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        // White outline on every segment of YOUR snake
+        if (isLocalPlayer && snake.alive) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.9)';
           ctx.lineWidth   = 1.5;
           ctx.globalAlpha = 1.0;
-          ctx.strokeRect(seg.x * CELL + 0.5, seg.y * CELL + 0.5, CELL - 1, CELL - 1);
+          ctx.strokeRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
         }
 
         // Shield ring on head
@@ -253,6 +249,22 @@ export default function GamePage({ navigate, addToast }: Props) {
           ctx.strokeRect(seg.x * CELL, seg.y * CELL, CELL, CELL);
         }
       });
+
+      // Arrow above your snake's head so you can always find yourself
+      if (isLocalPlayer && snake.alive && snake.body.length > 0) {
+        const head = snake.body[0];
+        const cx   = head.x * CELL + CELL / 2;
+        const ty   = head.y * CELL - 4;
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle   = '#ffffff';
+        ctx.shadowBlur  = 0;
+        ctx.beginPath();
+        ctx.moveTo(cx,     ty);
+        ctx.lineTo(cx - 5, ty - 8);
+        ctx.lineTo(cx + 5, ty - 8);
+        ctx.closePath();
+        ctx.fill();
+      }
 
       ctx.globalAlpha = 1.0;
       ctx.shadowBlur  = 0;
