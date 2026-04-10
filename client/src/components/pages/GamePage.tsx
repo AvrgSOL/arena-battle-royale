@@ -117,6 +117,7 @@ export default function GamePage({ navigate, addToast }: Props) {
 
     const gW = gameState.gridW || GRID_W;
     const gH = gameState.gridH || GRID_H;
+    if (gameState.tick === 1) console.log('[GamePage] playerId:', playerId, 'playerColor:', playerColor, 'snakes:', gameState.snakes.map(s => ({ id: s.id, name: s.name, color: s.color, isBot: s.isBot })));
 
     const ownedSet       = new Set(owned);
     const localSkinId    = Object.entries(SKIN_COLOR_MAP).find(
@@ -190,8 +191,11 @@ export default function GamePage({ navigate, addToast }: Props) {
     });
 
     // Snakes
+    // Use playerId as primary match; fall back to color match in case playerId hasn't resolved yet
     gameState.snakes.forEach(snake => {
-      const isLocalPlayer = snake.id === playerId;
+      const isLocalPlayer = playerId
+        ? snake.id === playerId
+        : (!!playerColor && snake.color === playerColor && !snake.isBot);
       const applySkin     = isLocalPlayer && ownsGlowSkin;
       const applyTrail    = isLocalPlayer && ownsTrail;
       const isGhost       = (snake.ghostTicks ?? 0) > 0;
