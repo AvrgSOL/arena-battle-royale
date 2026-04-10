@@ -7,6 +7,7 @@ import { formatArena, truncateAddress } from '../../lib/utils';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import KillFeed from '../ui/KillFeed';
+import GameCanvas3D from './GamePage3D';
 
 const CELL  = 20;
 const GRID_W = 40;
@@ -71,6 +72,8 @@ export default function GamePage({ navigate, addToast }: Props) {
   } = useSocket();
 
   const { owned } = useStore();
+
+  const [use3D, setUse3D] = useState(false);
 
   // Track final score so it's available after the snake is removed from state
   const [finalScore, setFinalScore] = useState(0);
@@ -462,6 +465,12 @@ export default function GamePage({ navigate, addToast }: Props) {
               {activeEvent.label}
             </span>
           )}
+          <button
+            onClick={() => setUse3D(v => !v)}
+            className="font-mono text-xs px-2 py-1 rounded border border-[#1a2840] text-gray-400 hover:text-[#00e5ff] hover:border-[#00e5ff] transition-colors"
+          >
+            {use3D ? '2D' : '3D'} MODE
+          </button>
           <Button size="sm" variant="ghost" onClick={handleLeave}>LEAVE</Button>
         </div>
       </div>
@@ -469,13 +478,22 @@ export default function GamePage({ navigate, addToast }: Props) {
       {/* Canvas + sidebar */}
       <div className="flex gap-4 items-start">
         <div className="relative">
-          <canvas
-            ref={canvasRef}
-            width={W}
-            height={H}
-            className="rounded-lg border border-[#1a2840]"
-            tabIndex={0}
-          />
+          {use3D ? (
+            <GameCanvas3D
+              gameState={gameState}
+              playerColor={playerColor}
+              width={W}
+              height={H}
+            />
+          ) : (
+            <canvas
+              ref={canvasRef}
+              width={W}
+              height={H}
+              className="rounded-lg border border-[#1a2840]"
+              tabIndex={0}
+            />
+          )}
           {/* Kill feed overlay (top-left of canvas) */}
           <div className="absolute top-2 left-2 flex flex-col gap-1 pointer-events-none">
             <KillFeed entries={killFeed} />
