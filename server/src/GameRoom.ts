@@ -324,7 +324,10 @@ export class GameRoom {
     }
 
     // ── Standard: shrink zone after grace period ─────────────────────────────
-    if (this.isStandard && this.zone && this.tick > STD_ZONE_GRACE && this.tick % STD_ZONE_INTERVAL === 0) {
+    // When only 2 alive, shrink every 30 ticks instead of 120
+    const aliveCount = snakes.length;
+    const zoneInterval = (this.isStandard && aliveCount <= 2) ? 30 : STD_ZONE_INTERVAL;
+    if (this.isStandard && this.zone && this.tick > STD_ZONE_GRACE && this.tick % zoneInterval === 0) {
       const z = this.zone;
       const newZone: Zone = {
         x1: Math.min(z.x1 + 1, Math.floor((this.gridW - STD_ZONE_MIN_W) / 2)),
@@ -558,13 +561,19 @@ export class GameRoom {
     const alive2 = alive.filter(s => s.alive);
 
     // ── Snake vs snake body collision (ghost snakes pass through) ─────────────
+    // Running into a frozen snake SHATTERS it (kills the frozen snake, attacker survives)
     alive2.forEach(a => {
       if (a.ghostTicks > 0) return; // ghost snake passes through bodies
       const h = nextHeads.get(a)!;
       alive2.forEach(b => {
         if (a === b) return;
         if (b.body.some(seg => seg.x === h.x && seg.y === h.y)) {
-          this.killSnake(a, 'snake');
+          if (b.frozenTicks > 0) {
+            // Shatter the frozen snake instead of killing attacker
+            this.killSnake(b, 'snake');
+          } else {
+            this.killSnake(a, 'snake');
+          }
         }
       });
     });
@@ -803,7 +812,7 @@ export class GameRoom {
       tick:      this.tick,
       snakes:    [...this.players.values()].map(s => ({
         id:          s.id,
-        body:        s.body,
+        body:        (!s.alive && s.isBot) ? [] : s.body, // dead bots send no body — reduces state size
         dir:         s.dir,
         alive:       s.alive,
         score:       s.score,

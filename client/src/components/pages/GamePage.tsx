@@ -96,12 +96,10 @@ export default function GamePage({ navigate, addToast }: Props) {
       ctx.fillRect(0, 0, W, H);
       ctx.strokeStyle = '#1a2840';
       ctx.lineWidth = 1;
-      for (let x = 0; x <= GRID_W; x++) {
-        ctx.beginPath(); ctx.moveTo(x * CELL, 0); ctx.lineTo(x * CELL, H); ctx.stroke();
-      }
-      for (let y = 0; y <= GRID_H; y++) {
-        ctx.beginPath(); ctx.moveTo(0, y * CELL); ctx.lineTo(W, y * CELL); ctx.stroke();
-      }
+      ctx.beginPath();
+      for (let x = 0; x <= GRID_W; x++) { ctx.moveTo(x * CELL, 0); ctx.lineTo(x * CELL, H); }
+      for (let y = 0; y <= GRID_H; y++) { ctx.moveTo(0, y * CELL); ctx.lineTo(W, y * CELL); }
+      ctx.stroke();
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
       ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = '#ffd54f';
@@ -134,15 +132,13 @@ export default function GamePage({ navigate, addToast }: Props) {
     ctx.fillStyle = '#050810';
     ctx.fillRect(0, 0, W, H);
 
-    // Grid lines
+    // Grid lines — batched into one path for performance
     ctx.strokeStyle = '#1a2840';
     ctx.lineWidth = 1;
-    for (let x = 0; x <= gW; x++) {
-      ctx.beginPath(); ctx.moveTo(x * CELL, 0); ctx.lineTo(x * CELL, H); ctx.stroke();
-    }
-    for (let y = 0; y <= gH; y++) {
-      ctx.beginPath(); ctx.moveTo(0, y * CELL); ctx.lineTo(W, y * CELL); ctx.stroke();
-    }
+    ctx.beginPath();
+    for (let x = 0; x <= gW; x++) { ctx.moveTo(x * CELL, 0); ctx.lineTo(x * CELL, H); }
+    for (let y = 0; y <= gH; y++) { ctx.moveTo(0, y * CELL); ctx.lineTo(W, y * CELL); }
+    ctx.stroke();
 
     // Zone overlay
     if (gameState.zone) {
