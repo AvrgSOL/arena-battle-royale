@@ -10,6 +10,7 @@ export interface SnakeState {
   color:        string;
   wallet:       string;
   name:         string;
+  isBot?:       boolean;
   shielded?:    boolean;
   ghostTicks?:  number;
   frozenTicks?: number;

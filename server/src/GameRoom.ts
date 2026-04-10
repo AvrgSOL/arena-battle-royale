@@ -41,6 +41,16 @@ const DM_SPEED_MIN      = 70;
 const STD_POWERUP_INTERVAL = 60;
 const STD_MAX_POWERUPS     = 3;
 
+// Standard mode: shrinking zone (starts after grace period)
+const STD_ZONE_GRACE    = 200;  // ticks before zone starts shrinking (~30s)
+const STD_ZONE_INTERVAL = 120;  // shrink every N ticks
+const STD_ZONE_MIN_W    = 12;   // minimum zone width
+const STD_ZONE_MIN_H    = 10;   // minimum zone height
+
+// Bots
+const BOT_NAMES  = ['Viper', 'Cobra', 'Mamba', 'Adder', 'Taipan', 'Krait', 'Anaconda'];
+const BOT_FILL   = 4;  // fill up to this many total snakes with bots
+
 // Mid-game events
 const EVENT_INTERVAL_MIN = 250;
 const EVENT_INTERVAL_RNG = 200;
@@ -142,6 +152,7 @@ export class GameRoom {
   status: 'waiting' | 'countdown' | 'playing' | 'finished' = 'waiting';
 
   private get isDeathmatch(): boolean { return this.config.mode === 'deathmatch'; }
+  private get isStandard():   boolean { return !this.isDeathmatch; }
   private get gridW():  number { return this.isDeathmatch ? DM_GRID_W  : GRID_W;  }
   private get gridH():  number { return this.isDeathmatch ? DM_GRID_H  : GRID_H;  }
   private get tickMs(): number { return this.isDeathmatch ? DM_TICK_MS : TICK_MS; }
@@ -252,12 +263,32 @@ export class GameRoom {
   private startGame(): void {
     this.status = 'playing';
     this.currentTickMs = this.tickMs;
+
+    // Fill empty slots with bots in standard mode
+    if (this.isStandard) {
+      const humanCount = this.players.size;
+      const botsNeeded = Math.max(0, this.config.maxPlayers - humanCount);
+      for (let i = 0; i < botsNeeded; i++) {
+        const idx  = humanCount + i;
+        const sp   = START_POSITIONS[idx % START_POSITIONS.length];
+        const color = COLORS[idx % COLORS.length];
+        const id   = uuid();
+        const name = `🤖 ${BOT_NAMES[idx % BOT_NAMES.length]}`;
+        const bot   = new Snake(id, sp.pos, sp.dir, color, 'bot', name);
+        bot.isBot   = true;
+        const botWs = {} as unknown as WebSocket; // unique dummy key per bot
+        this.players.set(botWs, bot);
+        this.wsToId.set(botWs, id);
+      }
+    }
+
     this.food = this.spawnFood(this.foodCount);
     if (this.isDeathmatch) {
       this.zone     = { x1: 0, y1: 0, x2: this.gridW - 1, y2: this.gridH - 1 };
       this.powerUps = this.spawnPowerUps(DM_POWERUP_COUNT);
     } else {
-      // Standard mode starts with 1 power-up
+      // Standard: zone starts at full grid, shrinks after grace period
+      this.zone     = { x1: 0, y1: 0, x2: this.gridW - 1, y2: this.gridH - 1 };
       this.powerUps = this.spawnPowerUps(1);
     }
     const state = this.buildState();
@@ -292,9 +323,69 @@ export class GameRoom {
       }
     }
 
+    // ── Standard: shrink zone after grace period ─────────────────────────────
+    if (this.isStandard && this.zone && this.tick > STD_ZONE_GRACE && this.tick % STD_ZONE_INTERVAL === 0) {
+      const z = this.zone;
+      const newZone: Zone = {
+        x1: Math.min(z.x1 + 1, Math.floor((this.gridW - STD_ZONE_MIN_W) / 2)),
+        y1: Math.min(z.y1 + 1, Math.floor((this.gridH - STD_ZONE_MIN_H) / 2)),
+        x2: Math.max(z.x2 - 1, Math.ceil((this.gridW + STD_ZONE_MIN_W) / 2) - 1),
+        y2: Math.max(z.y2 - 1, Math.ceil((this.gridH + STD_ZONE_MIN_H) / 2) - 1),
+      };
+      if (newZone.x1 <= newZone.x2 && newZone.y1 <= newZone.y2) this.zone = newZone;
+    }
+
     // ── Standard: periodic power-up spawn ────────────────────────────────────
     if (!this.isDeathmatch && this.tick % STD_POWERUP_INTERVAL === 0 && this.powerUps.length < STD_MAX_POWERUPS) {
       this.powerUps.push(...this.spawnPowerUps(1));
+    }
+
+    // ── Bot AI: pick a direction each tick ───────────────────────────────────
+    const BOT_DELTA: Record<Direction, Vec2> = {
+      UP: { x: 0, y: -1 }, DOWN: { x: 0, y: 1 }, LEFT: { x: -1, y: 0 }, RIGHT: { x: 1, y: 0 },
+    };
+    const ALL_DIRS: Direction[] = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
+    for (const s of snakes) {
+      if (!s.isBot || s.frozenTicks > 0) continue;
+      const head = s.body[0];
+      const z    = this.zone;
+      // Build set of dangerous cells (all snake bodies)
+      const bodySet = new Set<string>();
+      for (const other of this.players.values()) {
+        other.body.forEach(seg => bodySet.add(`${seg.x},${seg.y}`));
+      }
+      const obSet = new Set(this.obstacles.map(o => `${o.x},${o.y}`));
+      // Safe directions
+      const safeDirs = ALL_DIRS.filter(dir => {
+        const d  = BOT_DELTA[dir];
+        const nx = head.x + d.x;
+        const ny = head.y + d.y;
+        if (nx < 0 || nx >= this.gridW || ny < 0 || ny >= this.gridH) return false;
+        if (z && (nx < z.x1 || nx > z.x2 || ny < z.y1 || ny > z.y2)) return false;
+        if (obSet.has(`${nx},${ny}`)) return false;
+        if (bodySet.has(`${nx},${ny}`)) return false;
+        return true;
+      });
+      if (safeDirs.length === 0) continue; // trapped — let it die naturally
+      // Find nearest food or power-up as target
+      const targets: Vec2[] = [...this.food, ...this.powerUps.map(p => p.pos)];
+      let target: Vec2 | null = targets.length > 0 ? targets[0] : null;
+      let minD = target ? dist(head, target) : Infinity;
+      for (const t of targets) {
+        const d = dist(head, t);
+        if (d < minD) { minD = d; target = t; }
+      }
+      // Pick safe dir closest to target
+      let bestDir = safeDirs[0];
+      if (target) {
+        let bestDist = Infinity;
+        for (const dir of safeDirs) {
+          const d    = BOT_DELTA[dir];
+          const newD = dist({ x: head.x + d.x, y: head.y + d.y }, target);
+          if (newD < bestDist) { bestDist = newD; bestDir = dir; }
+        }
+      }
+      s.setDirection(bestDir);
     }
 
     // ── Tick down speed boosts ────────────────────────────────────────────────
@@ -551,15 +642,17 @@ export class GameRoom {
     this.status = 'finished';
     this.cleanup();
 
-    const totalPot   = this.players.size * this.config.entryFee;
+    const humanSnakes = [...this.players.values()].filter(s => !s.isBot);
+    const totalPot   = humanSnakes.length * this.config.entryFee;
     const treasury   = Math.floor(totalPot * 0.07);
     const burned     = Math.floor(totalPot * 0.05);
     const prizeArena = totalPot - treasury - burned;
 
-    // Win streak
-    const winStreak = winner ? recordWin(winner.wallet) : 0;
-    for (const snake of this.players.values()) {
-      if (!winner || snake.id !== winner.id) resetStreak(snake.wallet);
+    // Win streak (humans only)
+    const realWinner = winner && !winner.isBot ? winner : null;
+    const winStreak  = realWinner ? recordWin(realWinner.wallet) : 0;
+    for (const snake of humanSnakes) {
+      if (!realWinner || snake.id !== realWinner.id) resetStreak(snake.wallet);
     }
 
     broadcast(this.allClients(), {
@@ -572,10 +665,10 @@ export class GameRoom {
       winStreak,
     });
 
-    // Award XP + update challenges + ELO
+    // Award XP + update challenges + ELO (humans only)
     const losers: Array<{ wallet: string; name: string }> = [];
-    for (const snake of this.players.values()) {
-      const isWin = winner?.id === snake.id;
+    for (const snake of humanSnakes) {
+      const isWin = realWinner?.id === snake.id;
       awardXP(snake.wallet, snake.name, snake.score, this.tick, isWin);
       updateChallengeProgress(snake.wallet, {
         win:     isWin || undefined,
@@ -585,13 +678,13 @@ export class GameRoom {
       });
       if (!isWin) losers.push({ wallet: snake.wallet, name: snake.name });
     }
-    if (winner && losers.length > 0) {
-      updateELO(winner.wallet, winner.name, losers);
+    if (realWinner && losers.length > 0) {
+      updateELO(realWinner.wallet, realWinner.name, losers);
     }
 
-    // Challenge rewards (auto-claim)
+    // Challenge rewards (auto-claim, humans only)
     if (isTokenEnabled()) {
-      for (const snake of this.players.values()) {
+      for (const snake of humanSnakes) {
         const today      = new Date().toISOString().slice(0, 10);
         const challenges = getDailyChallenges(today);
         for (const ch of challenges) {
@@ -609,25 +702,25 @@ export class GameRoom {
     const arenaDisplay = (prizeArena / 1_000_000).toFixed(2);
     const burnDisplay  = (burned     / 1_000_000).toFixed(2);
     const houseDisplay = (treasury   / 1_000_000).toFixed(2);
-    logGame(`GAME_OVER winner:${winner?.name ?? 'none'} prize:${arenaDisplay} ARENA burned:${burnDisplay} ARENA house:${houseDisplay} ARENA players:${this.players.size} streak:${winStreak}`);
+    logGame(`GAME_OVER winner:${winner?.name ?? 'none'} prize:${arenaDisplay} ARENA burned:${burnDisplay} ARENA house:${houseDisplay} ARENA players:${humanSnakes.length} streak:${winStreak}`);
 
-    if (isTokenEnabled() && winner && prizeArena > 0) {
+    if (isTokenEnabled() && realWinner && prizeArena > 0) {
       swapArenaForSol(prizeArena).then(async lamports => {
         if (lamports > 0) {
-          const sig = await payWinnerSol(winner.wallet, lamports);
+          const sig = await payWinnerSol(realWinner.wallet, lamports);
           const solDisplay = (lamports / 1e9).toFixed(4);
-          console.log(`[arena] Paid ${solDisplay} SOL to ${winner.name} — tx: ${sig}`);
-          logGame(`PAID_SOL winner:${winner.name} sol:${solDisplay} tx:${sig}`);
+          console.log(`[arena] Paid ${solDisplay} SOL to ${realWinner.name} — tx: ${sig}`);
+          logGame(`PAID_SOL winner:${realWinner.name} sol:${solDisplay} tx:${sig}`);
           broadcast(this.allClients(), {
             type: 'PRIZE_PAID',
-            winnerId: winner.id,
+            winnerId: realWinner.id,
             solAmount: lamports,
             txSig: sig,
           });
         } else {
           console.warn('[arena] Swap failed, falling back to ARENA payout');
-          const sig = await payWinner(winner.wallet, prizeArena);
-          console.log(`[arena] Fallback paid ${arenaDisplay} ARENA to ${winner.name} — tx: ${sig}`);
+          const sig = await payWinner(realWinner.wallet, prizeArena);
+          console.log(`[arena] Fallback paid ${arenaDisplay} ARENA to ${realWinner.name} — tx: ${sig}`);
         }
       }).catch(e => console.error('[arena] Prize payout failed:', e));
 
@@ -641,7 +734,7 @@ export class GameRoom {
     }
 
     if (isTokenEnabled()) {
-      for (const snake of this.players.values()) {
+      for (const snake of humanSnakes) {
         const referrer = getReferrer(snake.wallet);
         if (referrer && !hasBeenRewarded(snake.wallet)) {
           markRewarded(snake.wallet);
@@ -717,6 +810,7 @@ export class GameRoom {
         color:       s.color,
         wallet:      s.wallet,
         name:        s.name,
+        isBot:       s.isBot       || undefined,
         shielded:    s.shielded    || undefined,
         ghostTicks:  s.ghostTicks  || undefined,
         frozenTicks: s.frozenTicks || undefined,
@@ -741,7 +835,9 @@ export class GameRoom {
   }
 
   private allClients(): Iterable<WebSocket> {
-    return [...this.players.keys(), ...this.spectators];
+    // Filter out dummy bot keys (they have no readyState)
+    const realWs = [...this.players.keys()].filter(ws => (ws as any).readyState !== undefined);
+    return [...realWs, ...this.spectators];
   }
 
   getSummary() {

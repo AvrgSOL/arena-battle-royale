@@ -21,6 +21,7 @@ export class Snake {
   wallet:       string;
   name:         string;
   pendingDir:   Direction | null = null;
+  isBot:        boolean  = false;
 
   // Power-up status fields
   shielded:    boolean = false;
