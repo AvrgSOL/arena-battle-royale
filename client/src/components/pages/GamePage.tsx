@@ -199,11 +199,14 @@ export default function GamePage({ navigate, addToast }: Props) {
       const isShielded    = snake.shielded;
 
       const trailLen = applyTrail ? 5 : 1;
+      // Opponents are dimmed so your snake stands out
+      const opponentDim = (!isLocalPlayer && snake.alive) ? 0.55 : 1.0;
 
       snake.body.forEach((seg, i) => {
         // Ghost: draw translucent
         let baseAlpha = snake.alive ? 1.0 : 0.27;
         if (isGhost) baseAlpha *= 0.45;
+        baseAlpha *= opponentDim;
 
         if (i < trailLen) {
           ctx.globalAlpha = i === 0 ? baseAlpha : baseAlpha * (1.0 - i * 0.18);
@@ -221,6 +224,10 @@ export default function GamePage({ navigate, addToast }: Props) {
         if (applySkin) {
           ctx.shadowColor = snake.color;
           ctx.shadowBlur  = 8;
+        } else if (isLocalPlayer && snake.alive) {
+          // Your snake always glows so it's easy to spot
+          ctx.shadowColor = snake.color;
+          ctx.shadowBlur  = 10;
         } else if (isShielded && snake.alive) {
           ctx.shadowColor = '#00e5ff';
           ctx.shadowBlur  = 12;
@@ -229,6 +236,14 @@ export default function GamePage({ navigate, addToast }: Props) {
         }
 
         ctx.fillRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
+
+        // Bright white outline on your snake's head
+        if (i === 0 && isLocalPlayer && snake.alive) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+          ctx.lineWidth   = 1.5;
+          ctx.globalAlpha = 1.0;
+          ctx.strokeRect(seg.x * CELL + 0.5, seg.y * CELL + 0.5, CELL - 1, CELL - 1);
+        }
 
         // Shield ring on head
         if (i === 0 && isShielded && snake.alive) {
