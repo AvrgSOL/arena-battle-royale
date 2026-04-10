@@ -467,9 +467,13 @@ export default function GamePage({ navigate, addToast }: Props) {
           )}
           <button
             onClick={() => setUse3D(v => !v)}
-            className="font-mono text-xs px-2 py-1 rounded border border-[#1a2840] text-gray-400 hover:text-[#00e5ff] hover:border-[#00e5ff] transition-colors"
+            className={`font-mono text-sm font-bold px-3 py-1.5 rounded border-2 transition-all ${
+              use3D
+                ? 'border-[#00e5ff] text-[#00e5ff] bg-[#00e5ff22] shadow-[0_0_12px_#00e5ff88]'
+                : 'border-[#a855f7] text-[#a855f7] bg-[#a855f722] shadow-[0_0_12px_#a855f788] hover:shadow-[0_0_18px_#a855f7cc]'
+            }`}
           >
-            {use3D ? '2D' : '3D'} MODE
+            {use3D ? '⬛ 2D' : '🎲 3D'}
           </button>
           <Button size="sm" variant="ghost" onClick={handleLeave}>LEAVE</Button>
         </div>
