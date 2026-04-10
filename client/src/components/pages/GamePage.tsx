@@ -191,52 +191,100 @@ export default function GamePage({ navigate, addToast }: Props) {
 
     // Snakes
     // Match by color + not-bot — each player has a unique color, bots can never match
+    const tick = gameState.tick;
+    const localTrailId = [...TRAIL_IDS].find(id => ownedSet.has(id)) ?? null;
+
     gameState.snakes.forEach(snake => {
       const isLocalPlayer = !!playerColor && snake.color === playerColor && !snake.isBot;
-      const applySkin     = isLocalPlayer && ownsGlowSkin;
-      const applyTrail    = isLocalPlayer && ownsTrail;
       const isGhost       = (snake.ghostTicks ?? 0) > 0;
       const isFrozen      = (snake.frozenTicks ?? 0) > 0;
       const isShielded    = snake.shielded;
+      const skinId        = isLocalPlayer ? localSkinId : null;
+      const trailId       = isLocalPlayer ? localTrailId : null;
 
-      const trailLen = applyTrail ? 5 : 1;
       // Opponents heavily dimmed; your snake stays full brightness
       const opponentDim = (!isLocalPlayer && snake.alive) ? 0.35 : 1.0;
 
       snake.body.forEach((seg, i) => {
-        // Ghost: draw translucent
         let baseAlpha = snake.alive ? 1.0 : 0.27;
         if (isGhost) baseAlpha *= 0.45;
         baseAlpha *= opponentDim;
 
-        if (i < trailLen) {
-          ctx.globalAlpha = i === 0 ? baseAlpha : baseAlpha * (1.0 - i * 0.18);
+        // Trail fade: ghost fades hard, fire/rainbow/electric fade gently
+        if (trailId === 'trail_ghost') {
+          ctx.globalAlpha = baseAlpha * Math.max(0.05, 1.0 - i * 0.14);
+        } else if (trailId) {
+          ctx.globalAlpha = i === 0 ? baseAlpha : baseAlpha * Math.max(0.2, 1.0 - i * 0.08);
         } else {
           ctx.globalAlpha = baseAlpha;
         }
 
-        // Frozen tint (blue overlay)
-        if (isFrozen && snake.alive) {
-          ctx.fillStyle = '#7dd3fc';
-        } else {
-          ctx.fillStyle = snake.alive ? snake.color : snake.color + '44';
+        // ── Segment color ──────────────────────────────────────────────────
+        let segColor = isFrozen && snake.alive ? '#7dd3fc'
+          : snake.alive ? snake.color : snake.color + '44';
+
+        if (isLocalPlayer && snake.alive) {
+          if (trailId === 'trail_rainbow') {
+            segColor = `hsl(${(i * 30 + tick * 8) % 360}, 100%, 62%)`;
+          } else if (trailId === 'trail_fire') {
+            const fire = ['#ffffff', '#fffacd', '#ffd700', '#ff8c00', '#ff4500', '#8b0000'];
+            segColor = fire[Math.min(i, fire.length - 1)];
+          } else if (skinId === 'skin_phantom') {
+            segColor = '#0d0d1a'; // near-black body
+          }
         }
 
-        if (applySkin) {
-          ctx.shadowColor = snake.color;
-          ctx.shadowBlur  = 8;
+        // ── Shadow / glow ──────────────────────────────────────────────────
+        ctx.shadowBlur = 0;
+        if (isLocalPlayer && snake.alive) {
+          if (skinId === 'skin_gold') {
+            ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = 14;
+          } else if (skinId === 'skin_phantom') {
+            ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 10;
+          } else if (skinId === 'skin_blood_red') {
+            ctx.shadowColor = '#ff4d6a';
+            ctx.shadowBlur  = 8 + 6 * Math.sin(tick * 0.25);
+          } else if (skinId === 'skin_toxic_green') {
+            ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 12;
+          } else if (skinId === 'skin_neon_cyan') {
+            ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 14;
+          } else if (skinId === 'skin_royal_purple') {
+            ctx.shadowColor = '#9c6bff';
+            ctx.shadowBlur  = 8 + 5 * Math.sin(tick * 0.18 + i * 0.4);
+          } else if (trailId === 'trail_electric') {
+            ctx.shadowColor = '#88ddff';
+            ctx.shadowBlur  = i < 3 ? 12 : 4;
+          } else if (trailId === 'trail_fire') {
+            ctx.shadowColor = i < 2 ? '#ffffff' : '#ff8c00';
+            ctx.shadowBlur  = i < 2 ? 14 : 6;
+          } else if (trailId === 'trail_rainbow') {
+            ctx.shadowColor = segColor; ctx.shadowBlur = 8;
+          }
         } else if (isShielded && snake.alive) {
-          ctx.shadowColor = '#00e5ff';
-          ctx.shadowBlur  = 12;
-        } else {
-          ctx.shadowBlur = 0;
+          ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 12;
         }
 
+        ctx.fillStyle = segColor;
         ctx.fillRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
 
-        // White outline on every segment of YOUR snake
-        if (isLocalPlayer && snake.alive) {
-          ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        // ── Per-segment overlays ───────────────────────────────────────────
+        // Phantom: white border on every segment
+        if (skinId === 'skin_phantom' && snake.alive) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+          ctx.lineWidth   = 1.5; ctx.shadowBlur = 0;
+          ctx.strokeRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
+        }
+        // Electric: jagged white arc on first 4 segments
+        if (trailId === 'trail_electric' && snake.alive && i < 4) {
+          ctx.strokeStyle = i === 0 ? '#ffffff' : `rgba(180,230,255,${0.7 - i * 0.15})`;
+          ctx.lineWidth   = 1; ctx.shadowBlur = 0;
+          ctx.globalAlpha = (0.85 - i * 0.18) * baseAlpha;
+          ctx.strokeRect(seg.x * CELL + 0.5, seg.y * CELL + 0.5, CELL - 1, CELL - 1);
+        }
+        // White outline on local player's snake so it always stands out
+        if (isLocalPlayer && snake.alive && skinId !== 'skin_phantom') {
+          ctx.shadowBlur  = 0;
+          ctx.strokeStyle = 'rgba(255,255,255,0.85)';
           ctx.lineWidth   = 1.5;
           ctx.globalAlpha = 1.0;
           ctx.strokeRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
@@ -244,6 +292,7 @@ export default function GamePage({ navigate, addToast }: Props) {
 
         // Shield ring on head
         if (i === 0 && isShielded && snake.alive) {
+          ctx.shadowBlur  = 0;
           ctx.strokeStyle = '#00e5ff';
           ctx.lineWidth   = 1.5;
           ctx.globalAlpha = 0.8;
@@ -251,13 +300,83 @@ export default function GamePage({ navigate, addToast }: Props) {
         }
       });
 
-      // Arrow above your snake's head so you can always find yourself
+      ctx.shadowBlur = 0;
+
+      // ── Post-body particle effects ─────────────────────────────────────
       if (isLocalPlayer && snake.alive && snake.body.length > 0) {
         const head = snake.body[0];
-        const cx   = head.x * CELL + CELL / 2;
-        const ty   = head.y * CELL - 4;
+        const hx = head.x * CELL + CELL / 2;
+        const hy = head.y * CELL + CELL / 2;
+
+        // Gold: 6 orbiting sparkle dots
+        if (skinId === 'skin_gold') {
+          for (let s = 0; s < 6; s++) {
+            const angle = tick * 0.12 + s * (Math.PI / 3);
+            const r  = CELL * 0.85;
+            const sx = hx + Math.cos(angle) * r;
+            const sy = hy + Math.sin(angle) * r;
+            const sz = 1.5 + Math.sin(tick * 0.3 + s) * 0.8;
+            ctx.globalAlpha = 0.7 + 0.3 * Math.sin(tick * 0.2 + s);
+            ctx.fillStyle   = s % 2 === 0 ? '#ffd54f' : '#fffde0';
+            ctx.fillRect(sx - sz / 2, sy - sz / 2, sz, sz);
+          }
+        }
+
+        // Toxic: green bubbles rising from body
+        if (skinId === 'skin_toxic_green') {
+          for (let b = 0; b < 4; b++) {
+            const bodyIdx = b * 2;
+            if (!snake.body[bodyIdx]) continue;
+            const bs  = snake.body[bodyIdx];
+            const bx  = bs.x * CELL + CELL / 2 + Math.sin(tick * 0.4 + b) * 3;
+            const by  = bs.y * CELL + CELL / 2 - ((tick * 1.2 + b * 7) % 18);
+            ctx.globalAlpha = Math.max(0, 0.7 - ((tick * 1.2 + b * 7) % 18) / 18);
+            ctx.fillStyle   = '#00ff88';
+            ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 4;
+            ctx.beginPath();
+            ctx.arc(bx, by, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.shadowBlur = 0;
+        }
+
+        // Blood red: drip particles falling from body
+        if (skinId === 'skin_blood_red') {
+          for (let d = 0; d < 4; d++) {
+            const bodyIdx = d * 2;
+            if (!snake.body[bodyIdx]) continue;
+            const bs     = snake.body[bodyIdx];
+            const dropY  = (tick * 1.5 + d * 9) % 22;
+            const bx     = bs.x * CELL + CELL / 2 + (d % 3 - 1) * 4;
+            const by     = bs.y * CELL + CELL - 1 + dropY;
+            ctx.globalAlpha = Math.max(0, 0.8 - dropY / 22);
+            ctx.fillStyle   = '#ff0033';
+            ctx.shadowColor = '#ff0033'; ctx.shadowBlur = 3;
+            ctx.beginPath();
+            ctx.arc(bx, by, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.shadowBlur = 0;
+        }
+
+        // Royal purple: shimmer stars scattered near head
+        if (skinId === 'skin_royal_purple') {
+          for (let s = 0; s < 4; s++) {
+            const angle = tick * 0.09 + s * (Math.PI / 2) + Math.sin(tick * 0.3 + s);
+            const r  = CELL * (0.7 + 0.3 * Math.sin(tick * 0.15 + s));
+            const sx = hx + Math.cos(angle) * r;
+            const sy = hy + Math.sin(angle) * r;
+            ctx.globalAlpha = 0.5 + 0.4 * Math.sin(tick * 0.25 + s);
+            ctx.fillStyle   = '#d4b3ff';
+            ctx.fillRect(sx - 1.5, sy - 1.5, 3, 3);
+          }
+        }
+
+        // Arrow above head so player can always find themselves
+        const cx = hx;
+        const ty = head.y * CELL - 4;
         ctx.globalAlpha = 1.0;
-        ctx.fillStyle   = '#ffffff';
+        ctx.fillStyle   = skinId === 'skin_gold' ? '#ffd54f' : '#ffffff';
         ctx.shadowBlur  = 0;
         ctx.beginPath();
         ctx.moveTo(cx,     ty);
