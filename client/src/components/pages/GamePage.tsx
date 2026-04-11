@@ -76,10 +76,11 @@ export default function GamePage({ navigate, addToast }: Props) {
 
   const [use3D, setUse3D] = useState(false);
   const [showViewPicker, setShowViewPicker] = useState(true);
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 768);
+    update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, []);
@@ -442,7 +443,7 @@ export default function GamePage({ navigate, addToast }: Props) {
     : null;
 
   return (
-    <div className="min-h-full bg-[#050810] flex flex-col items-center py-2 md:py-4 px-0 md:px-2 pb-52 md:pb-4">
+    <div className="min-h-full bg-[#050810] flex flex-col items-center py-4 px-2">
 
       {/* View picker modal */}
       {showViewPicker && (
@@ -470,29 +471,26 @@ export default function GamePage({ navigate, addToast }: Props) {
       )}
 
       {/* HUD */}
-      <div className="w-full max-w-[900px] flex items-center justify-between mb-2 px-2" data-v="v4">
-        <div className="flex items-center gap-2 md:gap-4 font-mono text-xs text-gray-400">
-          <span className="hidden md:inline">TICK <span className="text-[#00e5ff]">{gameState?.tick ?? 0}</span></span>
+      <div className="w-full max-w-[900px] flex items-center justify-between mb-3 px-1">
+        <div className="flex items-center gap-4 font-mono text-xs text-gray-400">
+          <span>TICK <span className="text-[#00e5ff]">{gameState?.tick ?? 0}</span></span>
           <span>ALIVE <span className="text-[#00ff88]">{aliveCount}</span></span>
-          {mySnake && (
-            <span>SCORE <span className="text-[#ffd54f]">{mySnake.score}</span></span>
-          )}
+          {mySnake && <span>SCORE <span className="text-[#ffd54f]">{mySnake.score}</span></span>}
           {playerColor && (
             <span className="flex items-center gap-1">
-              YOU
-              <span className="w-3 h-3 rounded-full inline-block" style={{ background: playerColor }} />
+              YOU <span className="w-3 h-3 rounded-full inline-block" style={{ background: playerColor }} />
             </span>
           )}
           {mySnake && (
             <span className="flex items-center gap-1">
-              {mySnake.shielded    && <span>🛡</span>}
+              {mySnake.shielded           && <span>🛡</span>}
               {(mySnake.ghostTicks  ?? 0) > 0 && <span>👻</span>}
               {(mySnake.frozenTicks ?? 0) > 0 && <span>❄️</span>}
               {(mySnake.magnetTicks ?? 0) > 0 && <span>🧲</span>}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {activeEvent && (
             <span className="font-mono text-xs font-bold text-[#ffd54f] animate-pulse px-2 py-0.5 rounded border border-[#ffd54f44]">
               {activeEvent.label}
@@ -503,24 +501,17 @@ export default function GamePage({ navigate, addToast }: Props) {
       </div>
 
       {/* Canvas + sidebar */}
-      <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start w-full max-w-[900px]">
-
-        {/* Canvas — CSS-scaled to fit screen width on mobile */}
-        <div className="relative w-full md:w-auto">
+      <div className="flex gap-4 items-start">
+        <div className="relative">
           {use3D ? (
-            <GameCanvas3D
-              gameState={gameState}
-              playerColor={playerColor}
-              width={W}
-              height={H}
-            />
+            <GameCanvas3D gameState={gameState} playerColor={playerColor} width={W} height={H} />
           ) : (
             <canvas
               ref={canvasRef}
               width={W}
               height={H}
-              className="rounded-lg border border-[#1a2840] block w-full md:w-[800px]"
-              style={{ touchAction: 'none', aspectRatio: `${W}/${H}` }}
+              className="rounded-lg border border-[#1a2840]"
+              style={{ touchAction: 'none' }}
               tabIndex={0}
             />
           )}
@@ -531,7 +522,7 @@ export default function GamePage({ navigate, addToast }: Props) {
           {/* 3D toggle */}
           <button
             onClick={() => setUse3D(v => !v)}
-            className={`absolute top-2 right-2 z-10 font-mono text-xs md:text-sm font-bold px-2 py-1 md:px-3 md:py-1.5 rounded border-2 transition-all ${
+            className={`absolute top-2 right-2 z-10 font-mono text-sm font-bold px-3 py-1.5 rounded border-2 transition-all ${
               use3D
                 ? 'border-[#00e5ff] text-[#00e5ff] bg-[#050810dd] shadow-[0_0_14px_#00e5ff]'
                 : 'border-[#a855f7] text-[#a855f7] bg-[#050810dd] shadow-[0_0_14px_#a855f7]'
@@ -541,23 +532,21 @@ export default function GamePage({ navigate, addToast }: Props) {
           </button>
         </div>
 
-        {/* Player list — horizontal strip on mobile, vertical sidebar on desktop */}
-        <div className="w-full md:w-44 bg-[#0b1120] border border-[#1a2840] rounded-lg p-2 md:p-3">
-          <div className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-1 hidden md:block">Players</div>
-          <div className="flex flex-row md:flex-col gap-2 md:gap-2 overflow-x-auto md:overflow-visible">
-            {gameState?.snakes.map(snake => (
-              <div key={snake.id} className={`flex items-center justify-between gap-1.5 shrink-0 md:shrink ${!snake.alive ? 'opacity-40' : ''}`}>
-                <div className="flex items-center gap-1 min-w-0">
-                  <span className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shrink-0" style={{ background: snake.color }} />
-                  <span className={`text-xs font-mono truncate max-w-[60px] md:max-w-none ${snake.id === playerId ? 'text-[#00ff88]' : 'text-white'}`}>
-                    {snake.name}
-                  </span>
-                  {snake.shielded && <span className="text-[10px]">🛡</span>}
-                </div>
-                <span className="text-xs font-mono text-[#ffd54f] shrink-0">{snake.score}</span>
+        {/* Player list */}
+        <div className="w-44 bg-[#0b1120] border border-[#1a2840] rounded-lg p-3 flex flex-col gap-2">
+          <div className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-1">Players</div>
+          {gameState?.snakes.map(snake => (
+            <div key={snake.id} className={`flex items-center justify-between gap-2 ${!snake.alive ? 'opacity-40' : ''}`}>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: snake.color }} />
+                <span className={`text-xs font-mono truncate ${snake.id === playerId ? 'text-[#00ff88]' : 'text-white'}`}>
+                  {snake.name}
+                </span>
+                {snake.shielded && <span className="text-[10px]">🛡</span>}
               </div>
-            ))}
-          </div>
+              <span className="text-xs font-mono text-[#ffd54f] shrink-0">{snake.score}</span>
+            </div>
+          ))}
         </div>
       </div>
 
