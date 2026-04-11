@@ -74,6 +74,7 @@ export default function GamePage({ navigate, addToast }: Props) {
   const { owned } = useStore();
 
   const [use3D, setUse3D] = useState(false);
+  const [showViewPicker, setShowViewPicker] = useState(true);
 
   // Track final score so it's available after the snake is removed from state
   const [finalScore, setFinalScore] = useState(0);
@@ -434,6 +435,31 @@ export default function GamePage({ navigate, addToast }: Props) {
 
   return (
     <div className="min-h-full bg-[#050810] flex flex-col items-center py-4 px-2">
+
+      {/* View picker modal */}
+      {showViewPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-6 p-10 rounded-2xl border-2 border-[#1a2840] bg-[#0b1120]">
+            <div className="font-mono text-2xl font-bold text-white tracking-widest">CHOOSE YOUR VIEW</div>
+            <div className="flex gap-6">
+              <button
+                onClick={() => { setUse3D(false); setShowViewPicker(false); }}
+                className="flex flex-col items-center gap-2 px-8 py-6 rounded-xl border-2 border-[#00e5ff] text-[#00e5ff] bg-[#00e5ff11] hover:bg-[#00e5ff22] hover:shadow-[0_0_24px_#00e5ff] transition-all font-mono font-bold text-lg"
+              >
+                <span className="text-4xl">🟦</span>
+                2D CLASSIC
+              </button>
+              <button
+                onClick={() => { setUse3D(true); setShowViewPicker(false); }}
+                className="flex flex-col items-center gap-2 px-8 py-6 rounded-xl border-2 border-[#a855f7] text-[#a855f7] bg-[#a855f711] hover:bg-[#a855f722] hover:shadow-[0_0_24px_#a855f7] transition-all font-mono font-bold text-lg"
+              >
+                <span className="text-4xl">🎲</span>
+                3D MODE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* HUD */}
       <div className="w-full max-w-[900px] flex items-center justify-between mb-3 px-1">
         <div className="flex items-center gap-4 font-mono text-xs text-gray-400">
