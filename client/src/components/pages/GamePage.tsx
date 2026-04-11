@@ -78,16 +78,19 @@ export default function GamePage({ navigate, addToast }: Props) {
   const [showViewPicker, setShowViewPicker] = useState(true);
   const canvasWrapRef = useRef<HTMLDivElement>(null);
   const [canvasScale, setCanvasScale] = useState(1);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Scale canvas to fit available width on mobile
+  // Detect mobile and scale canvas
   useEffect(() => {
-    const el = canvasWrapRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => {
-      setCanvasScale(Math.min(1, el.clientWidth / W));
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
+    const update = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      const el = canvasWrapRef.current;
+      if (el) setCanvasScale(Math.min(1, el.clientWidth / W));
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
   }, []);
 
   // Track final score so it's available after the snake is removed from state
@@ -476,7 +479,7 @@ export default function GamePage({ navigate, addToast }: Props) {
       )}
 
       {/* HUD */}
-      <div className="w-full max-w-[900px] flex items-center justify-between mb-2 px-2">
+      <div className="w-full max-w-[900px] flex items-center justify-between mb-2 px-2" data-v="v4">
         <div className="flex items-center gap-2 md:gap-4 font-mono text-xs text-gray-400">
           <span className="hidden md:inline">TICK <span className="text-[#00e5ff]">{gameState?.tick ?? 0}</span></span>
           <span>ALIVE <span className="text-[#00ff88]">{aliveCount}</span></span>
@@ -577,7 +580,7 @@ export default function GamePage({ navigate, addToast }: Props) {
       </div>
 
       {/* Mobile D-pad controls */}
-      {!gameOver && <MobileControls onDirection={handleDirection} />}
+      {!gameOver && <MobileControls onDirection={handleDirection} isMobile={isMobile} />}
 
       {/* Game Over Modal */}
       {gameOver && (
