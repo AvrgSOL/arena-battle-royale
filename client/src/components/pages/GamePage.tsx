@@ -465,16 +465,6 @@ export default function GamePage({ navigate, addToast }: Props) {
               {activeEvent.label}
             </span>
           )}
-          <button
-            onClick={() => setUse3D(v => !v)}
-            className={`font-mono text-sm font-bold px-3 py-1.5 rounded border-2 transition-all ${
-              use3D
-                ? 'border-[#00e5ff] text-[#00e5ff] bg-[#00e5ff22] shadow-[0_0_12px_#00e5ff88]'
-                : 'border-[#a855f7] text-[#a855f7] bg-[#a855f722] shadow-[0_0_12px_#a855f788] hover:shadow-[0_0_18px_#a855f7cc]'
-            }`}
-          >
-            {use3D ? '⬛ 2D' : '🎲 3D'}
-          </button>
           <Button size="sm" variant="ghost" onClick={handleLeave}>LEAVE</Button>
         </div>
       </div>
@@ -502,6 +492,17 @@ export default function GamePage({ navigate, addToast }: Props) {
           <div className="absolute top-2 left-2 flex flex-col gap-1 pointer-events-none">
             <KillFeed entries={killFeed} />
           </div>
+          {/* 3D toggle — floating on canvas top-right */}
+          <button
+            onClick={() => setUse3D(v => !v)}
+            className={`absolute top-2 right-2 z-10 font-mono text-sm font-bold px-3 py-1.5 rounded border-2 transition-all ${
+              use3D
+                ? 'border-[#00e5ff] text-[#00e5ff] bg-[#050810dd] shadow-[0_0_14px_#00e5ff]'
+                : 'border-[#a855f7] text-[#a855f7] bg-[#050810dd] shadow-[0_0_14px_#a855f7] hover:shadow-[0_0_22px_#a855f7]'
+            }`}
+          >
+            {use3D ? '⬛ 2D MODE' : '🎲 3D MODE'}
+          </button>
         </div>
 
         {/* Player list */}
