@@ -7,6 +7,7 @@ import { formatArena, truncateAddress } from '../../lib/utils';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import KillFeed from '../ui/KillFeed';
+import MobileControls from '../ui/MobileControls';
 import GameCanvas3D from './GamePage3D';
 
 const CELL  = 20;
@@ -496,8 +497,8 @@ export default function GamePage({ navigate, addToast }: Props) {
       </div>
 
       {/* Canvas + sidebar */}
-      <div className="flex gap-4 items-start">
-        <div className="relative">
+      <div className="flex flex-col md:flex-row gap-4 items-start w-full max-w-[900px]">
+        <div className="relative w-full md:w-auto overflow-hidden">
           {use3D ? (
             <GameCanvas3D
               gameState={gameState}
@@ -511,6 +512,7 @@ export default function GamePage({ navigate, addToast }: Props) {
               width={W}
               height={H}
               className="rounded-lg border border-[#1a2840]"
+              style={{ maxWidth: '100vw', touchAction: 'none' }}
               tabIndex={0}
             />
           )}
@@ -548,6 +550,9 @@ export default function GamePage({ navigate, addToast }: Props) {
           ))}
         </div>
       </div>
+
+      {/* Mobile D-pad controls */}
+      {!gameOver && <MobileControls onDirection={handleDirection} />}
 
       {/* Game Over Modal */}
       {gameOver && (
