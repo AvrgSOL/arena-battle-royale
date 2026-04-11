@@ -58,7 +58,7 @@ interface Props {
 }
 
 export default function GamePage({ navigate, addToast }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef  = useRef<HTMLCanvasElement>(null);
 
   const {
     gameState,
@@ -76,19 +76,10 @@ export default function GamePage({ navigate, addToast }: Props) {
 
   const [use3D, setUse3D] = useState(false);
   const [showViewPicker, setShowViewPicker] = useState(true);
-  const canvasWrapRef = useRef<HTMLDivElement>(null);
-  const [canvasScale, setCanvasScale] = useState(1);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
-  // Detect mobile and scale canvas
   useEffect(() => {
-    const update = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      const el = canvasWrapRef.current;
-      if (el) setCanvasScale(Math.min(1, el.clientWidth / W));
-    };
-    update();
+    const update = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, []);
@@ -512,36 +503,27 @@ export default function GamePage({ navigate, addToast }: Props) {
       </div>
 
       {/* Canvas + sidebar */}
-      <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start w-full max-w-[900px] px-0 md:px-0">
+      <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start w-full max-w-[900px]">
 
-        {/* Canvas — scales to viewport on mobile */}
-        <div ref={canvasWrapRef} className="relative w-full md:w-auto">
-          <div style={{
-            width:  W * canvasScale,
-            height: H * canvasScale,
-            overflow: 'hidden',
-            borderRadius: 8,
-          }}>
-            <div style={{ transform: `scale(${canvasScale})`, transformOrigin: 'top left', width: W, height: H }}>
-              {use3D ? (
-                <GameCanvas3D
-                  gameState={gameState}
-                  playerColor={playerColor}
-                  width={W}
-                  height={H}
-                />
-              ) : (
-                <canvas
-                  ref={canvasRef}
-                  width={W}
-                  height={H}
-                  className="rounded-lg border border-[#1a2840]"
-                  style={{ touchAction: 'none', display: 'block' }}
-                  tabIndex={0}
-                />
-              )}
-            </div>
-          </div>
+        {/* Canvas — CSS-scaled to fit screen width on mobile */}
+        <div className="relative w-full md:w-auto">
+          {use3D ? (
+            <GameCanvas3D
+              gameState={gameState}
+              playerColor={playerColor}
+              width={W}
+              height={H}
+            />
+          ) : (
+            <canvas
+              ref={canvasRef}
+              width={W}
+              height={H}
+              className="rounded-lg border border-[#1a2840] block w-full md:w-[800px]"
+              style={{ touchAction: 'none', aspectRatio: `${W}/${H}` }}
+              tabIndex={0}
+            />
+          )}
           {/* Kill feed overlay */}
           <div className="absolute top-2 left-2 flex flex-col gap-1 pointer-events-none">
             <KillFeed entries={killFeed} />
