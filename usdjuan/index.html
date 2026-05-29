@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>$USD juan — The People's Coin</title>
+  <meta name="description" content="Born in a taco stand. Built on Solana. Backed by vibes, tacos, and the strength of the people." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --orange:#FF6B00; --orange2:#FF9A00; --green:#1E7A1E; --green2:#2EAB2E; --cream:#FFF8EE; --dark:#0D0D0D; --card-bg:#151515; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Nunito', sans-serif; background: var(--dark); color: #fff; overflow-x: hidden; }
+    nav { position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0.9rem 2rem;background:rgba(13,13,13,0.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,107,0,0.2); }
+    .nav-logo { font-family:'Fredoka One',cursive;font-size:1.5rem;color:var(--orange2);text-decoration:none; }
+    .nav-logo span { color:var(--green2); }
+    .nav-links { display:flex;gap:1.8rem;list-style:none; }
+    .nav-links a { color:#ccc;text-decoration:none;font-weight:700;font-size:0.9rem;transition:color 0.2s; }
+    .nav-links a:hover { color:var(--orange2); }
+    .nav-cta { background:var(--orange);color:#fff;padding:0.5rem 1.2rem;border-radius:999px;font-weight:800;font-size:0.85rem;text-decoration:none;transition:background 0.2s,transform 0.1s; }
+    .nav-cta:hover { background:var(--orange2);transform:scale(1.04); }
+    #hero { min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:7rem 1.5rem 4rem;position:relative;overflow:hidden; }
+    .hero-bg { position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 30%,rgba(255,107,0,0.12) 0%,transparent 70%),radial-gradient(ellipse 50% 40% at 20% 80%,rgba(30,122,30,0.1) 0%,transparent 60%); }
+    .floaters { position:absolute;inset:0;pointer-events:none;overflow:hidden; }
+    .floater { position:absolute;font-size:2rem;opacity:0.07;animation:floatUp linear infinite; }
+    @keyframes floatUp { 0%{transform:translateY(110vh) rotate(0deg);opacity:0}10%{opacity:0.07}90%{opacity:0.07}100%{transform:translateY(-10vh) rotate(360deg);opacity:0} }
+    .hero-logo-placeholder { width:min(200px,55vw);height:min(200px,55vw);border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-family:'Fredoka One',cursive;font-size:clamp(2rem,8vw,4rem);color:#fff;filter:drop-shadow(0 0 40px rgba(255,154,0,0.4));animation:bobble 3s ease-in-out infinite;position:relative;z-index:1;margin-bottom:1rem; }
+    @keyframes bobble { 0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)} }
+    .hero-headline { font-family:'Fredoka One',cursive;font-size:clamp(2.8rem,7vw,5.5rem);line-height:1.05;margin-top:1.4rem;position:relative;z-index:1; }
+    .hero-headline .line1 { color:#fff; }
+    .hero-headline .line2 { background:linear-gradient(90deg,var(--orange),var(--orange2),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+    .hero-sub { margin-top:1rem;max-width:540px;font-size:clamp(1rem,2.2vw,1.2rem);color:#bbb;line-height:1.6;position:relative;z-index:1; }
+    .hero-badges { display:flex;flex-wrap:wrap;gap:0.6rem;justify-content:center;margin-top:1.6rem;position:relative;z-index:1; }
+    .badge { padding:0.35rem 0.9rem;border-radius:999px;font-size:0.82rem;font-weight:800;border:2px solid;letter-spacing:0.02em; }
+    .badge-orange { border-color:var(--orange);color:var(--orange2);background:rgba(255,107,0,0.1); }
+    .badge-green  { border-color:var(--green2);color:var(--green2);background:rgba(30,122,30,0.1); }
+    .badge-white  { border-color:#555;color:#ddd;background:rgba(255,255,255,0.05); }
+    .hero-btns { display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;margin-top:2.2rem;position:relative;z-index:1; }
+    .btn-primary { background:linear-gradient(135deg,var(--orange),var(--orange2));color:#fff;padding:0.85rem 2rem;border-radius:999px;font-weight:900;font-size:1rem;text-decoration:none;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 24px rgba(255,107,0,0.35); }
+    .btn-primary:hover { transform:translateY(-2px) scale(1.03);box-shadow:0 8px 32px rgba(255,107,0,0.5); }
+    .btn-secondary { background:rgba(255,255,255,0.07);color:#fff;padding:0.85rem 2rem;border-radius:999px;border:2px solid rgba(255,255,255,0.2);font-weight:900;font-size:1rem;text-decoration:none;transition:background 0.15s,transform 0.15s; }
+    .btn-secondary:hover { background:rgba(255,255,255,0.13);transform:translateY(-2px); }
+    .ticker-bar { width:100%;overflow:hidden;background:var(--orange);padding:0.5rem 0;margin-top:3rem;position:relative;z-index:1; }
+    .ticker-inner { display:flex;gap:3rem;white-space:nowrap;animation:ticker 18s linear infinite;font-family:'Fredoka One',cursive;font-size:1rem;color:#fff; }
+    @keyframes ticker { 0%{transform:translateX(0)}100%{transform:translateX(-50%)} }
+    section { padding:5rem 1.5rem; }
+    .section-inner { max-width:1100px;margin:0 auto; }
+    .section-label { font-size:0.75rem;font-weight:900;letter-spacing:0.15em;text-transform:uppercase;color:var(--orange);margin-bottom:0.6rem; }
+    .section-title { font-family:'Fredoka One',cursive;font-size:clamp(2rem,5vw,3.2rem);line-height:1.1;margin-bottom:1rem; }
+    .section-title span { color:var(--orange2); }
+    .section-desc { color:#aaa;font-size:1.05rem;line-height:1.7;max-width:640px; }
+    #story { background:#0a0a0a; }
+    .story-grid { display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center; }
+    .story-img-wrap { display:flex;justify-content:center;align-items:center;position:relative; }
+    .story-logo-placeholder { width:min(220px,70%);height:min(220px,70%);border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:4rem;filter:drop-shadow(0 0 50px rgba(255,107,0,0.3));animation:bobble 4s ease-in-out infinite; }
+    .story-glow { position:absolute;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,0,0.15),transparent 70%);pointer-events:none; }
+    .story-text p { color:#bbb;font-size:1rem;line-height:1.8;margin-bottom:1rem; }
+    .story-text p strong { color:var(--orange2); }
+    .quote-box { margin-top:1.5rem;padding:1rem 1.4rem;border-left:3px solid var(--orange);background:rgba(255,107,0,0.08);border-radius:0 8px 8px 0;font-style:italic;color:#e0c080;font-size:1.05rem;line-height:1.6; }
+    #features { background:var(--dark); }
+    .features-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.2rem;margin-top:2.8rem; }
+    .feature-card { background:var(--card-bg);border:1px solid rgba(255,107,0,0.15);border-radius:16px;padding:1.8rem 1.4rem;text-align:center;transition:border-color 0.2s,transform 0.2s,box-shadow 0.2s; }
+    .feature-card:hover { border-color:var(--orange);transform:translateY(-4px);box-shadow:0 8px 30px rgba(255,107,0,0.15); }
+    .feature-icon { font-size:2.6rem;margin-bottom:0.8rem;display:block; }
+    .feature-card h3 { font-family:'Fredoka One',cursive;font-size:1.3rem;margin-bottom:0.5rem;color:var(--orange2); }
+    .feature-card p { color:#888;font-size:0.9rem;line-height:1.6; }
+    #tokenomics { background:#0a0a0a; }
+    .toke-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-top:2.5rem; }
+    .toke-card { background:var(--card-bg);border-radius:16px;padding:1.6rem 1.2rem;text-align:center;border:1px solid rgba(255,255,255,0.07);position:relative;overflow:hidden; }
+    .toke-card::before { content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,107,0,0.06),transparent); }
+    .toke-num { font-family:'Fredoka One',cursive;font-size:2rem;color:var(--orange2);line-height:1;margin-bottom:0.3rem; }
+    .toke-label { font-size:0.78rem;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;color:#666; }
+    .toke-desc { font-size:0.85rem;color:#999;margin-top:0.5rem;line-height:1.5; }
+    #roadmap { background:var(--dark); }
+    .roadmap-list { display:flex;flex-direction:column;gap:0;margin-top:2.5rem;position:relative; }
+    .roadmap-list::before { content:'';position:absolute;left:22px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--orange),var(--green2)); }
+    .roadmap-item { display:flex;gap:1.5rem;padding-bottom:2.5rem;position:relative; }
+    .roadmap-dot { width:44px;height:44px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.3rem;position:relative;z-index:1;border:3px solid var(--dark); }
+    .dot-done { background:var(--green2); }
+    .dot-active { background:var(--orange);box-shadow:0 0 18px rgba(255,107,0,0.6);animation:pulse 1.5s ease-in-out infinite; }
+    .dot-pending { background:#222;border:2px solid #333; }
+    @keyframes pulse { 0%,100%{box-shadow:0 0 18px rgba(255,107,0,0.5)}50%{box-shadow:0 0 32px rgba(255,107,0,0.9)} }
+    .roadmap-content { padding-top:0.6rem; }
+    .roadmap-phase { font-size:0.7rem;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;color:var(--orange);margin-bottom:0.25rem; }
+    .roadmap-title { font-family:'Fredoka One',cursive;font-size:1.3rem;margin-bottom:0.4rem; }
+    .roadmap-items { list-style:none; }
+    .roadmap-items li { font-size:0.9rem;color:#888;padding:0.15rem 0; }
+    .roadmap-items li::before { content:'🌮 '; }
+    #faq { background:#0a0a0a; }
+    .faq-list { margin-top:2rem;display:flex;flex-direction:column;gap:0.8rem;max-width:720px; }
+    .faq-item { border:1px solid rgba(255,107,0,0.15);border-radius:12px;overflow:hidden;background:var(--card-bg); }
+    .faq-q { width:100%;padding:1.1rem 1.4rem;display:flex;justify-content:space-between;align-items:center;background:none;border:none;color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.95rem;cursor:pointer;text-align:left;gap:1rem;transition:color 0.2s; }
+    .faq-q:hover { color:var(--orange2); }
+    .faq-icon { font-size:1.2rem;flex-shrink:0;transition:transform 0.3s; }
+    .faq-item.open .faq-icon { transform:rotate(45deg); }
+    .faq-a { max-height:0;overflow:hidden;transition:max-height 0.35s ease,padding 0.3s;padding:0 1.4rem;color:#888;font-size:0.9rem;line-height:1.7; }
+    .faq-item.open .faq-a { max-height:200px;padding:0 1.4rem 1.1rem; }
+    #cta { background:linear-gradient(135deg,rgba(255,107,0,0.12),rgba(30,122,30,0.08));border-top:1px solid rgba(255,107,0,0.2);border-bottom:1px solid rgba(30,122,30,0.15);text-align:center;padding:5rem 1.5rem; }
+    #cta p { color:#999;font-size:1.05rem;margin:1rem auto 2rem;max-width:500px;line-height:1.7; }
+    .cta-btns { display:flex;flex-wrap:wrap;gap:1rem;justify-content:center; }
+    footer { background:#080808;border-top:1px solid #1a1a1a;padding:3rem 1.5rem;text-align:center; }
+    .footer-logo { font-family:'Fredoka One',cursive;font-size:1.8rem;color:var(--orange2);margin-bottom:0.5rem;display:block; }
+    .footer-logo span { color:var(--green2); }
+    .footer-tagline { color:#555;font-size:0.85rem;margin-bottom:1.5rem; }
+    .footer-links { display:flex;flex-wrap:wrap;gap:1.2rem;justify-content:center;margin-bottom:1.5rem; }
+    .footer-links a { color:#555;text-decoration:none;font-size:0.82rem;font-weight:700;transition:color 0.2s; }
+    .footer-links a:hover { color:var(--orange2); }
+    .footer-copy { color:#333;font-size:0.75rem; }
+    .footer-copy span { color:var(--orange); }
+    .socials { display:flex;gap:0.8rem;justify-content:center;margin-bottom:1.5rem; }
+    .social-btn { width:42px;height:42px;border-radius:50%;background:#151515;border:1px solid #222;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem;transition:background 0.2s,border-color 0.2s,transform 0.15s; }
+    .social-btn:hover { background:rgba(255,107,0,0.15);border-color:var(--orange);transform:translateY(-2px); }
+    @media (max-width:720px) { nav{padding:0.7rem 1rem} .nav-links{display:none} .story-grid{grid-template-columns:1fr;gap:2rem} .story-img-wrap{order:-1} }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="#" class="nav-logo">$USD<span>juan</span></a>
+    <ul class="nav-links">
+      <li><a href="#story">Story</a></li>
+      <li><a href="#features">Why Juan</a></li>
+      <li><a href="#tokenomics">Tokenomics</a></li>
+      <li><a href="#roadmap">Roadmap</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+    <a href="#cta" class="nav-cta">Buy $JUAN</a>
+  </nav>
+
+  <section id="hero">
+    <div class="hero-bg"></div>
+    <div class="floaters" aria-hidden="true">
+      <span class="floater" style="left:5%;animation-duration:14s;animation-delay:0s;font-size:2.5rem">🌮</span>
+      <span class="floater" style="left:15%;animation-duration:18s;animation-delay:2s">🪙</span>
+      <span class="floater" style="left:30%;animation-duration:12s;animation-delay:5s;font-size:1.5rem">🌯</span>
+      <span class="floater" style="left:50%;animation-duration:20s;animation-delay:1s">🌮</span>
+      <span class="floater" style="left:65%;animation-duration:15s;animation-delay:3s;font-size:3rem">💰</span>
+      <span class="floater" style="left:78%;animation-duration:11s;animation-delay:7s;font-size:1.8rem">🌶️</span>
+      <span class="floater" style="left:90%;animation-duration:17s;animation-delay:4s">🌮</span>
+      <span class="floater" style="left:42%;animation-duration:22s;animation-delay:9s;font-size:1.4rem">🫙</span>
+    </div>
+    <img src="logo.png" alt="$USD juan" class="hero-logo" />
+    <h1 class="hero-headline">
+      <span class="line1">The People's Coin.</span><br/>
+      <span class="line2">Born in a Taco Stand.</span>
+    </h1>
+    <p class="hero-sub">Fast like Solana. Strong like street tacos.<br/>Stable-ish after 3 margaritas. Always one Juan away from financial freedom.</p>
+    <div class="hero-badges">
+      <span class="badge badge-orange">⚡ Built on Solana</span>
+      <span class="badge badge-green">🌮 Launched on Pump.fun</span>
+      <span class="badge badge-white">🤝 Fair Launch — No Presale</span>
+      <span class="badge badge-orange">🔥 Zero Team Tokens</span>
+    </div>
+    <div class="hero-btns">
+      <a href="#buy" class="btn-primary">🌮 Buy on Pump.fun</a>
+      <a href="#story" class="btn-secondary">Read the Legend</a>
+    </div>
+    <div class="ticker-bar">
+      <div class="ticker-inner">
+        🌮 $USD juan &nbsp;·&nbsp; THE PEOPLE'S PESO &nbsp;·&nbsp; FAST LIKE SOLANA &nbsp;·&nbsp; STRONG LIKE STREET TACOS &nbsp;·&nbsp; ONE JUAN = ONE DREAM &nbsp;·&nbsp;
+        🌮 $USD juan &nbsp;·&nbsp; THE PEOPLE'S PESO &nbsp;·&nbsp; FAST LIKE SOLANA &nbsp;·&nbsp; STRONG LIKE STREET TACOS &nbsp;·&nbsp; ONE JUAN = ONE DREAM &nbsp;·&nbsp;
+      </div>
+    </div>
+  </section>
+
+  <section id="story">
+    <div class="section-inner">
+      <div class="story-grid">
+        <div class="story-img-wrap">
+          <div class="story-glow"></div>
+          <img src="logo.png" alt="$USD juan" style="width:min(280px,80%);filter:drop-shadow(0 0 50px rgba(255,107,0,0.3));animation:bobble 4s ease-in-out infinite" />
+        </div>
+        <div class="story-text">
+          <p class="section-label">The Origin Story</p>
+          <h2 class="section-title">The Legend of <span>Juan</span></h2>
+          <p>$USD juan started as a joke in a tiny roadside taco stand somewhere between the border of traditional finance and the wild west of crypto. Juan was just a regular guy running <strong>"El Mercado"</strong> — a beat-up food truck serving the best tacos in town.</p>
+          <p>Every day, customers complained about inflation, banks freezing transfers, and dollars losing value. Juan didn't understand crypto at first — he only understood: <strong>"People trust tacos more than banks."</strong></p>
+          <p>One night, Juan overheard crypto traders arguing about stablecoins collapsing. He laughed, tipped his sombrero, and said the words that changed everything:</p>
+          <div class="quote-box">"Why not make a coin backed by vibes, tacos, and the strength of the people?"</div>
+          <p style="margin-top:1rem">The traders thought it was hilarious. <strong>By sunrise, $USD juan was born.</strong></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="section-inner">
+      <p class="section-label">Why $USD juan</p>
+      <h2 class="section-title">Unlike Cold Corporate <span>Stablecoins</span></h2>
+      <p class="section-desc">No suits. No board meetings. No rugging. Just tacos, Solana, and vibes.</p>
+      <div class="features-grid">
+        <div class="feature-card"><span class="feature-icon">⚡</span><h3>Fast Like Solana</h3><p>Transactions so fast Juan can flip a taco before your bank loads its login page.</p></div>
+        <div class="feature-card"><span class="feature-icon">🌮</span><h3>Strong Like Street Tacos</h3><p>Built on real community. No VC money. No insider dumps. Just the people.</p></div>
+        <div class="feature-card"><span class="feature-icon">🍹</span><h3>Stable-ish After 3 Margaritas</h3><p>We never promised moonshots. We promised good vibes and honest gains.</p></div>
+        <div class="feature-card"><span class="feature-icon">💸</span><h3>One Juan Away</h3><p>Always one Juan away from financial freedom. The dream is real if you believe.</p></div>
+        <div class="feature-card"><span class="feature-icon">🤝</span><h3>Community Owned</h3><p>No whales running the kitchen. Every holder is a chef. Every vote matters.</p></div>
+        <div class="feature-card"><span class="feature-icon">🔥</span><h3>Zero Corporate BS</h3><p>No white papers from boardrooms. The roadmap was written on a napkin at El Mercado.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tokenomics">
+    <div class="section-inner">
+      <p class="section-label">Tokenomics</p>
+      <h2 class="section-title">The <span>Juan</span> Supply</h2>
+      <p class="section-desc">Pump.fun fair launch. No presale. No team allocation. No BS.</p>
+      <div class="toke-grid">
+        <div class="toke-card"><div class="toke-num">1B</div><div class="toke-label">Total Supply</div><div class="toke-desc">1,000,000,000 $JUAN — one billion tacos for the people.</div></div>
+        <div class="toke-card"><div class="toke-num">0%</div><div class="toke-label">Team Tokens</div><div class="toke-desc">Juan doesn't keep the best tacos for himself. Every token is public.</div></div>
+        <div class="toke-card"><div class="toke-num">0%</div><div class="toke-label">Buy/Sell Tax</div><div class="toke-desc">No hidden fees. Pump.fun takes a tiny platform fee and that's it.</div></div>
+        <div class="toke-card"><div class="toke-num">~$69K</div><div class="toke-label">Graduation MC</div><div class="toke-desc">Bonding curve fills → graduates to Raydium with locked liquidity. Forever.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="buy" style="background:#0a0a0a">
+    <div class="section-inner">
+      <p class="section-label">How to Buy</p>
+      <h2 class="section-title">Get Your <span>$JUAN</span> in 3 Steps</h2>
+      <p class="section-desc">Even Juan figured it out. No finance degree required.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.2rem;margin-top:2.5rem">
+        <div class="feature-card" style="text-align:left">
+          <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:1rem">
+            <span style="width:36px;height:36px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-family:'Fredoka One',cursive;font-size:1.1rem;flex-shrink:0">1</span>
+            <h3 style="font-family:'Fredoka One',cursive;font-size:1.2rem;color:var(--orange2)">Get a Solana Wallet</h3>
+          </div>
+          <p style="color:#888;font-size:0.9rem;line-height:1.6">Download <strong style="color:#ccc">Phantom</strong> or <strong style="color:#ccc">Solflare</strong>. Save your seed phrase. Not on a napkin.</p>
+        </div>
+        <div class="feature-card" style="text-align:left">
+          <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:1rem">
+            <span style="width:36px;height:36px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-family:'Fredoka One',cursive;font-size:1.1rem;flex-shrink:0">2</span>
+            <h3 style="font-family:'Fredoka One',cursive;font-size:1.2rem;color:var(--orange2)">Buy Some SOL</h3>
+          </div>
+          <p style="color:#888;font-size:0.9rem;line-height:1.6">Buy SOL on <strong style="color:#ccc">Coinbase, Kraken, or Binance</strong> and send to your wallet. SOL runs the taco truck.</p>
+        </div>
+        <div class="feature-card" style="text-align:left">
+          <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:1rem">
+            <span style="width:36px;height:36px;border-radius:50%;background:var(--green2);display:flex;align-items:center;justify-content:center;font-family:'Fredoka One',cursive;font-size:1.1rem;flex-shrink:0">3</span>
+            <h3 style="font-family:'Fredoka One',cursive;font-size:1.2rem;color:var(--green2)">Buy on Pump.fun</h3>
+          </div>
+          <p style="color:#888;font-size:0.9rem;line-height:1.6">Go to <strong style="color:#ccc">pump.fun</strong>, search <strong style="color:#ccc">$USD juan</strong>, connect wallet, swap SOL for $JUAN. Buen provecho.</p>
+        </div>
+      </div>
+      <div style="margin-top:2rem;background:var(--card-bg);border:1px solid rgba(255,107,0,0.3);border-radius:12px;padding:1.2rem 1.5rem;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem">
+        <div>
+          <div style="font-size:0.7rem;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;color:var(--orange);margin-bottom:0.3rem">Contract Address</div>
+          <div id="ca-text" style="font-family:monospace;font-size:0.9rem;color:#ccc;word-break:break-all">TBA — deploying soon on Pump.fun</div>
+        </div>
+        <button onclick="copyCA()" style="background:var(--orange);color:#fff;border:none;padding:0.5rem 1.2rem;border-radius:8px;font-family:'Nunito',sans-serif;font-weight:900;font-size:0.85rem;cursor:pointer" id="copy-btn">Copy CA</button>
+      </div>
+      <div style="margin-top:1.5rem;text-align:center"><a href="#" class="btn-primary">🌮 Buy $USD juan on Pump.fun</a></div>
+    </div>
+  </section>
+
+  <section id="roadmap">
+    <div class="section-inner">
+      <p class="section-label">Roadmap</p>
+      <h2 class="section-title">The <span>Taco Truck</span> Route</h2>
+      <p class="section-desc">Written on a napkin. Delivered with carnitas-level commitment.</p>
+      <div class="roadmap-list">
+        <div class="roadmap-item"><div class="roadmap-dot dot-done">✅</div><div class="roadmap-content"><div class="roadmap-phase">Phase 1 — The Taco Stand Opens</div><h3 class="roadmap-title">The Birth of $USD juan</h3><ul class="roadmap-items"><li>Juan has the idea over late-night al pastor</li><li>Token deployed on Solana</li><li>Logo & branding cooked up fresh</li><li>Website launched</li></ul></div></div>
+        <div class="roadmap-item"><div class="roadmap-dot dot-active">🔥</div><div class="roadmap-content"><div class="roadmap-phase">Phase 2 — Word Gets Out</div><h3 class="roadmap-title">Growing the Line Outside El Mercado</h3><ul class="roadmap-items"><li>Community launch on X & Telegram</li><li>DEX listing & liquidity locked</li><li>First 1,000 Juan holders</li><li>Meme campaign: "One Juan = One Dream"</li></ul></div></div>
+        <div class="roadmap-item"><div class="roadmap-dot dot-pending">🗺️</div><div class="roadmap-content"><div class="roadmap-phase">Phase 3 — The Food Truck Goes Regional</div><h3 class="roadmap-title">Expansion & Visibility</h3><ul class="roadmap-items"><li>CEX listings (Tier 2 & beyond)</li><li>Influencer & KOL partnerships</li><li>10,000 holders milestone</li><li>Juan merch drop</li></ul></div></div>
+        <div class="roadmap-item"><div class="roadmap-dot dot-pending">🌎</div><div class="roadmap-content"><div class="roadmap-phase">Phase 4 — Juan Goes Global</div><h3 class="roadmap-title">The People's Peso Takes Over</h3><ul class="roadmap-items"><li>Major CEX listing targets</li><li>$USD juan payment integrations</li><li>Juan DAO — community governance</li><li>100,000 holders. The taco truck becomes a chain.</li></ul></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="section-inner">
+      <p class="section-label">FAQ</p>
+      <h2 class="section-title">Got <span>Questions?</span></h2>
+      <p class="section-desc">Juan has answers. May or may not have been influenced by margaritas.</p>
+      <div class="faq-list">
+        <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Is $USD juan a real stablecoin?<span class="faq-icon">+</span></button><div class="faq-a">No. $USD juan is a meme coin with the spirit of a stablecoin and the energy of a street festival. Stable-ish after 3 margaritas.</div></div>
+        <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">What blockchain is $USD juan on?<span class="faq-icon">+</span></button><div class="faq-a">Solana. Fast, cheap, built for the people — just like a good taco stand. No $200 gas fees here.</div></div>
+        <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Is this a rug pull?<span class="faq-icon">+</span></button><div class="faq-a">Juan does not rug. Juan serves tacos. Liquidity is locked. No team allocation. No insider tokens.</div></div>
+        <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How do I buy $USD juan?<span class="faq-icon">+</span></button><div class="faq-a">Get a Phantom wallet, fund with SOL, head to pump.fun and search $USD juan. Swap, confirm, welcome to El Mercado.</div></div>
+        <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">What gives $USD juan value?<span class="faq-icon">+</span></button><div class="faq-a">Vibes. Community. Tacos. And the truth that people trust a good taco stand more than a multinational bank.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="cta">
+    <div class="section-inner">
+      <p class="section-label">Join the Movement</p>
+      <h2 class="section-title">Ready to be <span>One Juan</span> Away?</h2>
+      <p>The taco truck is rolling. The line is forming. Don't be the person who showed up after it sold out.</p>
+      <div class="cta-btns">
+        <a href="#buy" class="btn-primary">🌮 Buy on Pump.fun</a>
+        <a href="#" class="btn-secondary">Join the Community</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span class="footer-logo">$USD<span>juan</span></span>
+    <p class="footer-tagline">Born in a taco stand. Built on Solana. Backed by the people.</p>
+    <div class="socials">
+      <a href="#" class="social-btn" title="X / Twitter"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.912-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+      <a href="#" class="social-btn" title="Telegram"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.96 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></a>
+      <a href="#" class="social-btn" title="DexScreener">📊</a>
+    </div>
+    <div class="footer-links">
+      <a href="#story">Story</a>
+      <a href="#features">Why Juan</a>
+      <a href="#tokenomics">Tokenomics</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="#buy">Buy on Pump.fun</a>
+    </div>
+    <p class="footer-copy">© 2025 $USD juan. Not financial advice. <span>Do your own research.</span><br/>Juan is not responsible for gains, losses, or taco-induced decision making.</p>
+  </footer>
+
+  <script>
+    function copyCA() {
+      const ca = document.getElementById('ca-text').textContent.trim();
+      if (ca.startsWith('TBA')) return;
+      navigator.clipboard.writeText(ca).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => btn.textContent = 'Copy CA', 2000);
+      });
+    }
+    function toggleFaq(btn) {
+      const item = btn.closest('.faq-item');
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+      if (!isOpen) item.classList.add('open');
+    }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.style.opacity='1'; e.target.style.transform='translateY(0)'; } });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.feature-card, .toke-card, .roadmap-item, .faq-item').forEach(el => {
+      el.style.opacity='0'; el.style.transform='translateY(24px)';
+      el.style.transition='opacity 0.5s ease, transform 0.5s ease';
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>
