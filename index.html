@@ -111,7 +111,24 @@
     .socials { display:flex;gap:0.8rem;justify-content:center;margin-bottom:1.5rem; }
     .social-btn { width:42px;height:42px;border-radius:50%;background:#151515;border:1px solid #222;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem;transition:background 0.2s,border-color 0.2s,transform 0.15s; }
     .social-btn:hover { background:rgba(255,107,0,0.15);border-color:var(--orange);transform:translateY(-2px); }
-    @media (max-width:720px) { nav{padding:0.7rem 1rem} .nav-links{display:none} .story-grid{grid-template-columns:1fr;gap:2rem} .story-img-wrap{order:-1} }
+    @media (max-width:720px) {
+      nav{padding:0.7rem 1rem}
+      .nav-links{display:none}
+      .story-grid{grid-template-columns:1fr;gap:2rem}
+      .story-img-wrap{order:-1}
+      .hero-logo{width:min(160px,45vw) !important}
+      section{padding:3rem 1rem}
+      .section-inner{padding:0}
+      .hero-headline{font-size:clamp(2rem,10vw,3rem)}
+      .hero-sub{font-size:0.95rem}
+      .hero-btns{flex-direction:column;align-items:center}
+      .btn-primary,.btn-secondary{width:100%;text-align:center;padding:0.9rem 1.2rem}
+      .features-grid{grid-template-columns:1fr}
+      .toke-grid{grid-template-columns:1fr 1fr}
+      .hero-badges{gap:0.4rem}
+      .badge{font-size:0.72rem;padding:0.3rem 0.7rem}
+      #hero{padding:5rem 1rem 3rem}
+    }
   </style>
 </head>
 <body>
