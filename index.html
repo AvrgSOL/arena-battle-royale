@@ -130,6 +130,26 @@
       .badge{font-size:0.72rem;padding:0.3rem 0.7rem}
       #hero{padding:5rem 1rem 3rem}
     }
+    /* Menu Board Cards */
+    .menu-card { background:var(--card-bg);border:2px solid rgba(255,107,0,0.18);border-radius:18px;padding:1.5rem 1.2rem 1.2rem;display:flex;flex-direction:column;align-items:center;text-align:center;gap:0.5rem;transition:border-color 0.2s,transform 0.2s,box-shadow 0.2s;position:relative;cursor:pointer; }
+    .menu-card:hover { border-color:var(--orange);transform:translateY(-4px);box-shadow:0 8px 32px rgba(255,107,0,0.18); }
+    .menu-card.selected { border-color:var(--orange2);box-shadow:0 0 0 3px rgba(255,154,0,0.25),0 8px 32px rgba(255,107,0,0.2); }
+    .menu-card-gold { border-color:rgba(255,154,0,0.4);background:linear-gradient(135deg,#1a1200,#151515); }
+    .menu-card-gold:hover { border-color:var(--orange2);box-shadow:0 8px 40px rgba(255,154,0,0.25); }
+    .menu-card-gold.selected { border-color:var(--orange2);box-shadow:0 0 0 3px rgba(255,154,0,0.35),0 8px 40px rgba(255,154,0,0.3); }
+    .menu-badge { position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,var(--orange),var(--orange2));color:#fff;font-size:0.7rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;padding:0.2rem 0.8rem;border-radius:999px;white-space:nowrap; }
+    .taco-img { width:110px;height:110px;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(255,107,0,0.25));transition:transform 0.2s; }
+    .menu-card:hover .taco-img { transform:scale(1.06) rotate(-3deg); }
+    .menu-price { font-family:'Fredoka One',cursive;font-size:1.5rem;color:var(--orange2);line-height:1; }
+    .menu-tokens { font-size:0.82rem;font-weight:800;color:var(--green2);letter-spacing:0.02em; }
+    .menu-spots { font-size:0.78rem;color:#666;font-weight:700; }
+    .menu-bar-wrap { width:100%;background:#1a1a1a;border-radius:999px;height:6px;overflow:hidden; }
+    .menu-bar { height:100%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:999px;width:0%;transition:width 0.8s ease; }
+    .menu-btn { margin-top:0.4rem;width:100%;padding:0.6rem 0.8rem;border:none;border-radius:999px;font-family:'Nunito',sans-serif;font-weight:900;font-size:0.85rem;cursor:pointer;background:rgba(255,107,0,0.15);color:var(--orange2);border:1px solid rgba(255,107,0,0.3);transition:background 0.2s,transform 0.1s; }
+    .menu-btn:hover { background:rgba(255,107,0,0.28);transform:scale(1.02); }
+    .menu-btn-gold { background:linear-gradient(135deg,var(--orange),var(--orange2));color:#fff;border:none; }
+    .menu-btn-gold:hover { filter:brightness(1.1); }
+    .menu-card.selected .menu-btn { background:var(--orange);color:#fff;border-color:var(--orange); }
   </style>
 </head>
 <body>
@@ -181,77 +201,101 @@
     </div>
   </section>
 
-  <!-- MARGARITA CLUB -->
+  <!-- MENU BOARD PRE-SALE -->
   <section id="margarita" style="background:#0a0a0a;padding:5rem 1.5rem">
     <div class="section-inner">
-      <p class="section-label">Pre-Launch Exclusive</p>
-      <h2 class="section-title">Join the <span>Margarita Club 🍹</span></h2>
-      <p class="section-desc">Buy Juan a margarita before launch. Get 100,000 $JUAN airdropped to your wallet + an exclusive $USDjuan NFT. First 500 wallets only.</p>
+      <p class="section-label">Pre-Launch Token Sale</p>
+      <h2 class="section-title">El Mercado <span>Menu Board 🌮</span></h2>
+      <p class="section-desc">Pick your order. Pay in SOL. Get $JUAN airdropped at launch. Limited spots — first come, first served.</p>
 
-      <!-- Counter -->
-      <div style="display:flex;align-items:center;gap:2rem;margin-top:2.5rem;flex-wrap:wrap">
-        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.3);border-radius:16px;padding:1.5rem 2rem;text-align:center;min-width:160px">
-          <div id="mc-count" style="font-family:'Fredoka One',cursive;font-size:3rem;color:var(--orange2);line-height:1">0</div>
-          <div style="font-size:0.75rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-top:0.3rem">Joined</div>
+      <!-- Total progress bar -->
+      <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.2);border-radius:16px;padding:1.5rem 2rem;margin-top:2.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.5rem">
+          <span style="font-family:'Fredoka One',cursive;font-size:1.1rem;color:#fff">Total Spots Filled</span>
+          <span style="font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--orange2)"><span id="total-sold">0</span> / 950</span>
         </div>
-        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.15);border-radius:16px;padding:1.5rem 2rem;text-align:center;min-width:160px">
-          <div id="mc-remaining" style="font-family:'Fredoka One',cursive;font-size:3rem;color:var(--green2);line-height:1">500</div>
-          <div style="font-size:0.75rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-top:0.3rem">Spots Left</div>
-        </div>
-        <div style="flex:1;min-width:200px">
-          <div style="background:#1a1a1a;border-radius:999px;height:12px;overflow:hidden">
-            <div id="mc-bar" style="height:100%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:999px;width:0%;transition:width 1s ease"></div>
-          </div>
-          <div style="font-size:0.8rem;color:#555;margin-top:0.5rem;font-weight:700">0 / 500 spots filled</div>
+        <div style="background:#1a1a1a;border-radius:999px;height:14px;overflow:hidden">
+          <div id="total-bar" style="height:100%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:999px;width:0%;transition:width 1s ease"></div>
         </div>
       </div>
 
-      <!-- Perks -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-top:2rem">
-        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.15);border-radius:12px;padding:1.2rem;text-align:center">
-          <div style="font-size:2rem;margin-bottom:0.5rem">🪙</div>
-          <div style="font-family:'Fredoka One',cursive;color:var(--orange2);margin-bottom:0.3rem">100,000 $JUAN</div>
-          <div style="font-size:0.8rem;color:#666">Airdropped at launch</div>
+      <!-- Menu Cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.5rem;margin-top:2.5rem">
+
+        <!-- VEGGIE -->
+        <div class="menu-card" id="card-veggie">
+          <img src="taco-veggie.png" alt="Veggie" class="taco-img" />
+          <div class="menu-price">0.05 SOL</div>
+          <div class="menu-tokens">50,000 $JUAN</div>
+          <div class="menu-spots"><span id="spots-veggie">500</span> spots left</div>
+          <div class="menu-bar-wrap"><div class="menu-bar" id="bar-veggie"></div></div>
+          <button class="menu-btn" onclick="selectPackage('veggie')">Order Veggie</button>
         </div>
-        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.15);border-radius:12px;padding:1.2rem;text-align:center">
-          <div style="font-size:2rem;margin-bottom:0.5rem">🖼️</div>
-          <div style="font-family:'Fredoka One',cursive;color:var(--orange2);margin-bottom:0.3rem">Exclusive NFT</div>
-          <div style="font-size:0.8rem;color:#666">$USDjuan OG badge</div>
+
+        <!-- POLLO -->
+        <div class="menu-card" id="card-pollo">
+          <img src="taco-pollo.png" alt="Pollo" class="taco-img" />
+          <div class="menu-price">0.1 SOL</div>
+          <div class="menu-tokens">150,000 $JUAN</div>
+          <div class="menu-spots"><span id="spots-pollo">300</span> spots left</div>
+          <div class="menu-bar-wrap"><div class="menu-bar" id="bar-pollo"></div></div>
+          <button class="menu-btn" onclick="selectPackage('pollo')">Order Pollo</button>
         </div>
-        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.15);border-radius:12px;padding:1.2rem;text-align:center">
-          <div style="font-size:2rem;margin-bottom:0.5rem">👑</div>
-          <div style="font-family:'Fredoka One',cursive;color:var(--orange2);margin-bottom:0.3rem">OG Status</div>
-          <div style="font-size:0.8rem;color:#666">Wall of fame forever</div>
+
+        <!-- PASTOR -->
+        <div class="menu-card" id="card-pastor">
+          <img src="taco-pastor.png" alt="Pastor" class="taco-img" />
+          <div class="menu-price">0.5 SOL</div>
+          <div class="menu-tokens">1,000,000 $JUAN</div>
+          <div class="menu-spots"><span id="spots-pastor">100</span> spots left</div>
+          <div class="menu-bar-wrap"><div class="menu-bar" id="bar-pastor"></div></div>
+          <button class="menu-btn" onclick="selectPackage('pastor')">Order Pastor</button>
         </div>
+
+        <!-- ASADA -->
+        <div class="menu-card menu-card-gold" id="card-asada">
+          <div class="menu-badge">👑 VIP</div>
+          <img src="taco-asada.png" alt="Asada" class="taco-img" />
+          <div class="menu-price" style="color:var(--orange2)">1 SOL</div>
+          <div class="menu-tokens">3,000,000 $JUAN</div>
+          <div class="menu-spots"><span id="spots-asada">50</span> spots left</div>
+          <div class="menu-bar-wrap"><div class="menu-bar" id="bar-asada"></div></div>
+          <button class="menu-btn menu-btn-gold" onclick="selectPackage('asada')">Order Asada</button>
+        </div>
+
       </div>
 
-      <!-- Connect + Pay -->
+      <!-- Wallet + Pay -->
       <div style="margin-top:2.5rem;background:var(--card-bg);border:1px solid rgba(255,107,0,0.2);border-radius:16px;padding:2rem">
         <div id="mc-wallet-section">
-          <p style="color:#888;margin-bottom:1.2rem;font-size:0.95rem">Connect your Phantom wallet to join the Margarita Club.</p>
-          <button onclick="connectWallet()" class="btn-primary" style="font-size:0.95rem">🔌 Connect Phantom Wallet</button>
+          <p style="color:#888;margin-bottom:1.2rem;font-size:0.95rem">Connect your Phantom wallet to place your order.</p>
+          <button onclick="connectWallet()" class="btn-primary">🔌 Connect Phantom Wallet</button>
         </div>
         <div id="mc-pay-section" style="display:none">
           <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:1.2rem;flex-wrap:wrap">
             <div style="width:10px;height:10px;border-radius:50%;background:var(--green2)"></div>
             <span style="font-family:monospace;font-size:0.85rem;color:#ccc" id="mc-wallet-display"></span>
           </div>
-          <button onclick="buyMargarita()" id="mc-btn" class="btn-primary" style="font-size:0.95rem">🍹 Buy Juan a Margarita — 0.005 SOL</button>
-          <p style="font-size:0.78rem;color:#444;margin-top:0.8rem">0.005 SOL ≈ a round of margaritas for the crew</p>
+          <div id="selected-order" style="display:none;background:#0d0d0d;border:1px solid rgba(255,107,0,0.3);border-radius:10px;padding:1rem 1.2rem;margin-bottom:1.2rem">
+            <div style="font-size:0.72rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;color:var(--orange);margin-bottom:0.4rem">Your Order</div>
+            <div style="font-family:'Fredoka One',cursive;font-size:1.2rem;color:#fff" id="order-summary"></div>
+          </div>
+          <button onclick="buyPackage()" id="mc-btn" class="btn-primary" style="width:100%">🌮 Place Order</button>
+          <p style="font-size:0.75rem;color:#444;margin-top:0.8rem;text-align:center">Select a menu item above first</p>
         </div>
         <div id="mc-success-section" style="display:none;text-align:center;padding:1rem 0">
-          <div style="font-size:3rem;margin-bottom:0.5rem">🍹</div>
-          <div style="font-family:'Fredoka One',cursive;font-size:1.5rem;color:var(--green2);margin-bottom:0.5rem">You're in the club!</div>
-          <div style="color:#888;font-size:0.9rem">Your wallet is registered. You'll receive 100,000 $JUAN + NFT at launch.</div>
+          <div style="font-size:3rem;margin-bottom:0.5rem">🌮</div>
+          <div style="font-family:'Fredoka One',cursive;font-size:1.5rem;color:var(--green2);margin-bottom:0.5rem">Order placed!</div>
+          <div style="color:#888;font-size:0.9rem" id="success-msg"></div>
         </div>
-        <div id="mc-status-msg" style="margin-top:1rem;font-size:0.85rem;color:var(--orange);display:none"></div>
+        <div id="mc-status-msg" style="margin-top:1rem;font-size:0.85rem;color:#ff6b6b;display:none"></div>
       </div>
 
-      <!-- Margarita Wall -->
+      <!-- Wall -->
       <div style="margin-top:2.5rem">
-        <h3 style="font-family:'Fredoka One',cursive;font-size:1.4rem;margin-bottom:1rem;color:#fff">🍹 The Margarita Wall</h3>
+        <h3 style="font-family:'Fredoka One',cursive;font-size:1.4rem;margin-bottom:1rem;color:#fff">🌮 El Mercado Wall of Fame</h3>
         <div id="mc-wall" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.6rem;max-height:400px;overflow-y:auto">
-          <div style="color:#444;font-size:0.85rem;font-style:italic">No one yet — be the first!</div>
+          <div style="color:#444;font-size:0.85rem;font-style:italic">No orders yet — be the first!</div>
         </div>
       </div>
     </div>
@@ -407,30 +451,67 @@
   </footer>
 
   <script>
-    const BACKEND      = 'https://usd-juan-backend.up.railway.app';
-    const TREASURY     = '2a8stFN2d8QHmvfDwUeYS6tu8RPANsv79xBYHBBeLVkw';
-    const PRICE_LAMPORTS = 5000000; // 0.005 SOL
+    const BACKEND  = 'https://usd-juan-backend.up.railway.app';
+    const TREASURY = '2a8stFN2d8QHmvfDwUeYS6tu8RPANsv79xBYHBBeLVkw';
+
+    const PACKAGES = {
+      veggie: { label: 'Veggie',  sol: 0.05, lamports: 50000000,   tokens: '50,000',     maxSpots: 500 },
+      pollo:  { label: 'Pollo',   sol: 0.1,  lamports: 100000000,  tokens: '150,000',    maxSpots: 300 },
+      pastor: { label: 'Pastor',  sol: 0.5,  lamports: 500000000,  tokens: '1,000,000',  maxSpots: 100 },
+      asada:  { label: 'Asada',   sol: 1,    lamports: 1000000000, tokens: '3,000,000',  maxSpots: 50  },
+    };
+    const TOTAL_SPOTS = 950;
+
     let connectedWallet = null;
+    let selectedPkg     = null;
+
+    function selectPackage(id) {
+      selectedPkg = id;
+      document.querySelectorAll('.menu-card').forEach(c => c.classList.remove('selected'));
+      document.getElementById('card-' + id).classList.add('selected');
+      const pkg = PACKAGES[id];
+      document.getElementById('order-summary').textContent = `${pkg.label} — ${pkg.sol} SOL → ${pkg.tokens} $JUAN`;
+      document.getElementById('selected-order').style.display = 'block';
+      document.getElementById('mc-btn').textContent = `🌮 Order ${pkg.label} — ${pkg.sol} SOL`;
+    }
 
     async function loadWall() {
       try {
         const res  = await fetch(`${BACKEND}/status`);
         const data = await res.json();
-        document.getElementById('mc-count').textContent     = data.count;
-        document.getElementById('mc-remaining').textContent = data.remaining;
-        document.getElementById('mc-bar').style.width       = (data.count / 500 * 100) + '%';
 
-        const wall = document.getElementById('mc-wall');
-        if (data.wallets.length === 0) {
-          wall.innerHTML = '<div style="color:#444;font-size:0.85rem;font-style:italic">No one yet — be the first!</div>';
-        } else {
-          wall.innerHTML = data.wallets.map((w, i) =>
-            `<div style="background:#151515;border:1px solid #222;border-radius:8px;padding:0.6rem 0.8rem;font-family:monospace;font-size:0.72rem;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-              <span style="color:var(--orange2);margin-right:0.4rem">#${i+1}</span>${w.address}
-            </div>`
-          ).join('');
+        // Update per-tier spot counters
+        let totalSold = 0;
+        for (const [id, pkg] of Object.entries(PACKAGES)) {
+          const tierData = data.tiers?.[id] || { count: 0 };
+          const filled   = tierData.count;
+          const left     = pkg.maxSpots - filled;
+          totalSold     += filled;
+          const spotsEl  = document.getElementById('spots-' + id);
+          const barEl    = document.getElementById('bar-' + id);
+          if (spotsEl) spotsEl.textContent = Math.max(0, left);
+          if (barEl)   barEl.style.width   = Math.min(100, filled / pkg.maxSpots * 100) + '%';
+          if (left <= 0) {
+            const btn = document.querySelector(`#card-${id} .menu-btn`);
+            if (btn) { btn.textContent = 'Sold Out'; btn.disabled = true; btn.style.opacity = '0.4'; }
+          }
         }
-      } catch(e) { console.log('Backend offline, showing placeholder wall'); }
+        document.getElementById('total-sold').textContent = totalSold;
+        document.getElementById('total-bar').style.width  = (totalSold / TOTAL_SPOTS * 100) + '%';
+
+        // Wall
+        const wall = document.getElementById('mc-wall');
+        if (!data.wallets || data.wallets.length === 0) {
+          wall.innerHTML = '<div style="color:#444;font-size:0.85rem;font-style:italic">No orders yet — be the first!</div>';
+        } else {
+          wall.innerHTML = data.wallets.map((w, i) => {
+            const tierLabel = w.tier ? PACKAGES[w.tier]?.label : '';
+            return `<div style="background:#151515;border:1px solid #222;border-radius:8px;padding:0.6rem 0.8rem;font-family:monospace;font-size:0.72rem;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              <span style="color:var(--orange2);margin-right:0.4rem">#${i+1}</span>${w.address}${tierLabel ? `<span style="color:var(--green2);margin-left:0.5rem">[${tierLabel}]</span>` : ''}
+            </div>`;
+          }).join('');
+        }
+      } catch(e) { console.log('Backend offline'); }
     }
 
     async function connectWallet() {
@@ -447,11 +528,14 @@
       } catch(e) { showStatus('Wallet connection cancelled', true); }
     }
 
-    async function buyMargarita() {
+    async function buyPackage() {
       if (!connectedWallet) return;
+      if (!selectedPkg) { showStatus('Select a menu item first', true); return; }
+      const pkg = PACKAGES[selectedPkg];
       const btn = document.getElementById('mc-btn');
       btn.disabled    = true;
       btn.textContent = 'Sending...';
+      hideStatus();
       try {
         const { Transaction, SystemProgram, PublicKey, Connection } = solanaWeb3;
         const conn    = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
@@ -459,39 +543,43 @@
         const to      = new PublicKey(TREASURY);
         const { blockhash } = await conn.getLatestBlockhash();
         const tx = new Transaction({ recentBlockhash: blockhash, feePayer: from });
-        tx.add(SystemProgram.transfer({ fromPubkey: from, toPubkey: to, lamports: PRICE_LAMPORTS }));
-        const signed    = await window.solana.signTransaction(tx);
-        const txSig     = await conn.sendRawTransaction(signed.serialize());
+        tx.add(SystemProgram.transfer({ fromPubkey: from, toPubkey: to, lamports: pkg.lamports }));
+        const signed = await window.solana.signTransaction(tx);
+        const txSig  = await conn.sendRawTransaction(signed.serialize());
         await conn.confirmTransaction(txSig, 'confirmed');
 
         btn.textContent = 'Verifying...';
         const verifyRes = await fetch(`${BACKEND}/verify`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ txSig, wallet: connectedWallet }),
+          body:    JSON.stringify({ txSig, wallet: connectedWallet, tier: selectedPkg }),
         });
         const result = await verifyRes.json();
         if (result.success) {
           document.getElementById('mc-pay-section').style.display     = 'none';
           document.getElementById('mc-success-section').style.display = 'block';
+          document.getElementById('success-msg').textContent = `${pkg.tokens} $JUAN reserved for ${connectedWallet.slice(0,6)}...${connectedWallet.slice(-4)}. Airdrop at launch.`;
           loadWall();
         } else {
           showStatus(result.error || 'Something went wrong', true);
           btn.disabled    = false;
-          btn.textContent = '🍹 Buy Juan a Margarita — 0.005 SOL';
+          btn.textContent = `🌮 Order ${pkg.label} — ${pkg.sol} SOL`;
         }
       } catch(e) {
         showStatus('Transaction failed: ' + e.message, true);
         btn.disabled    = false;
-        btn.textContent = '🍹 Buy Juan a Margarita — 0.005 SOL';
+        btn.textContent = `🌮 Order ${pkg.label} — ${pkg.sol} SOL`;
       }
     }
 
     function showStatus(msg, isError) {
-      const el    = document.getElementById('mc-status-msg');
-      el.textContent  = msg;
-      el.style.color  = isError ? '#ff6b6b' : 'var(--green2)';
+      const el = document.getElementById('mc-status-msg');
+      el.textContent   = msg;
+      el.style.color   = isError ? '#ff6b6b' : 'var(--green2)';
       el.style.display = 'block';
+    }
+    function hideStatus() {
+      document.getElementById('mc-status-msg').style.display = 'none';
     }
 
     // Load Solana web3.js and wall on page load
