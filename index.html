@@ -135,6 +135,7 @@
   <nav>
     <a href="#" class="nav-logo">$USD<span>juan</span></a>
     <ul class="nav-links">
+      <li><a href="#margarita">🍹 Club</a></li>
       <li><a href="#story">Story</a></li>
       <li><a href="#features">Why Juan</a></li>
       <li><a href="#tokenomics">Tokenomics</a></li>
@@ -176,6 +177,82 @@
       <div class="ticker-inner">
         🌮 $USDjuan &nbsp;·&nbsp; PEGGED TO THE DREAM &nbsp;·&nbsp; NOT FINANCIAL ADVICE &nbsp;·&nbsp; DEFINITELY NOT A STABLECOIN &nbsp;·&nbsp; ONE JUAN = ONE DREAM &nbsp;·&nbsp;
         🌮 $USDjuan &nbsp;·&nbsp; PEGGED TO THE DREAM &nbsp;·&nbsp; NOT FINANCIAL ADVICE &nbsp;·&nbsp; DEFINITELY NOT A STABLECOIN &nbsp;·&nbsp; ONE JUAN = ONE DREAM &nbsp;·&nbsp;
+      </div>
+    </div>
+  </section>
+
+  <!-- MARGARITA CLUB -->
+  <section id="margarita" style="background:#0a0a0a;padding:5rem 1.5rem">
+    <div class="section-inner">
+      <p class="section-label">Pre-Launch Exclusive</p>
+      <h2 class="section-title">Join the <span>Margarita Club 🍹</span></h2>
+      <p class="section-desc">Buy Juan a margarita before launch. Get 100,000 $JUAN airdropped to your wallet + an exclusive $USDjuan NFT. First 500 wallets only.</p>
+
+      <!-- Counter -->
+      <div style="display:flex;align-items:center;gap:2rem;margin-top:2.5rem;flex-wrap:wrap">
+        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.3);border-radius:16px;padding:1.5rem 2rem;text-align:center;min-width:160px">
+          <div id="mc-count" style="font-family:'Fredoka One',cursive;font-size:3rem;color:var(--orange2);line-height:1">0</div>
+          <div style="font-size:0.75rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-top:0.3rem">Joined</div>
+        </div>
+        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.15);border-radius:16px;padding:1.5rem 2rem;text-align:center;min-width:160px">
+          <div id="mc-remaining" style="font-family:'Fredoka One',cursive;font-size:3rem;color:var(--green2);line-height:1">500</div>
+          <div style="font-size:0.75rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-top:0.3rem">Spots Left</div>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <div style="background:#1a1a1a;border-radius:999px;height:12px;overflow:hidden">
+            <div id="mc-bar" style="height:100%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:999px;width:0%;transition:width 1s ease"></div>
+          </div>
+          <div style="font-size:0.8rem;color:#555;margin-top:0.5rem;font-weight:700">0 / 500 spots filled</div>
+        </div>
+      </div>
+
+      <!-- Perks -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-top:2rem">
+        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.15);border-radius:12px;padding:1.2rem;text-align:center">
+          <div style="font-size:2rem;margin-bottom:0.5rem">🪙</div>
+          <div style="font-family:'Fredoka One',cursive;color:var(--orange2);margin-bottom:0.3rem">100,000 $JUAN</div>
+          <div style="font-size:0.8rem;color:#666">Airdropped at launch</div>
+        </div>
+        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.15);border-radius:12px;padding:1.2rem;text-align:center">
+          <div style="font-size:2rem;margin-bottom:0.5rem">🖼️</div>
+          <div style="font-family:'Fredoka One',cursive;color:var(--orange2);margin-bottom:0.3rem">Exclusive NFT</div>
+          <div style="font-size:0.8rem;color:#666">$USDjuan OG badge</div>
+        </div>
+        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.15);border-radius:12px;padding:1.2rem;text-align:center">
+          <div style="font-size:2rem;margin-bottom:0.5rem">👑</div>
+          <div style="font-family:'Fredoka One',cursive;color:var(--orange2);margin-bottom:0.3rem">OG Status</div>
+          <div style="font-size:0.8rem;color:#666">Wall of fame forever</div>
+        </div>
+      </div>
+
+      <!-- Connect + Pay -->
+      <div style="margin-top:2.5rem;background:var(--card-bg);border:1px solid rgba(255,107,0,0.2);border-radius:16px;padding:2rem">
+        <div id="mc-wallet-section">
+          <p style="color:#888;margin-bottom:1.2rem;font-size:0.95rem">Connect your Phantom wallet to join the Margarita Club.</p>
+          <button onclick="connectWallet()" class="btn-primary" style="font-size:0.95rem">🔌 Connect Phantom Wallet</button>
+        </div>
+        <div id="mc-pay-section" style="display:none">
+          <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:1.2rem;flex-wrap:wrap">
+            <div style="width:10px;height:10px;border-radius:50%;background:var(--green2)"></div>
+            <span style="font-family:monospace;font-size:0.85rem;color:#ccc" id="mc-wallet-display"></span>
+          </div>
+          <button onclick="buyMargarita()" id="mc-btn" class="btn-primary" style="font-size:0.95rem">🍹 Buy Juan a Margarita — 0.005 SOL</button>
+          <p style="font-size:0.78rem;color:#444;margin-top:0.8rem">0.005 SOL ≈ a round of margaritas for the crew</p>
+        </div>
+        <div id="mc-success-section" style="display:none;text-align:center;padding:1rem 0">
+          <div style="font-size:3rem;margin-bottom:0.5rem">🍹</div>
+          <div style="font-family:'Fredoka One',cursive;font-size:1.5rem;color:var(--green2);margin-bottom:0.5rem">You're in the club!</div>
+          <div style="color:#888;font-size:0.9rem">Your wallet is registered. You'll receive 100,000 $JUAN + NFT at launch.</div>
+        </div>
+        <div id="mc-status-msg" style="margin-top:1rem;font-size:0.85rem;color:var(--orange);display:none"></div>
+      </div>
+
+      <!-- Margarita Wall -->
+      <div style="margin-top:2.5rem">
+        <h3 style="font-family:'Fredoka One',cursive;font-size:1.4rem;margin-bottom:1rem;color:#fff">🍹 The Margarita Wall</h3>
+        <div id="mc-wall" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.6rem;max-height:400px;overflow-y:auto">
+          <div style="color:#444;font-size:0.85rem;font-style:italic">No one yet — be the first!</div>
+        </div>
       </div>
     </div>
   </section>
@@ -295,85 +372,6 @@
         <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Is this a rug pull?<span class="faq-icon">+</span></button><div class="faq-a">Juan does not rug. Juan serves tacos. Liquidity is locked. No team allocation. No insider tokens.</div></div>
         <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How do I buy $USDjuan?<span class="faq-icon">+</span></button><div class="faq-a">Get a Phantom wallet, fund with SOL, head to pump.fun and search $USDjuan. Swap, confirm, welcome to El Mercado.</div></div>
         <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">What gives $USDjuan value?<span class="faq-icon">+</span></button><div class="faq-a">Vibes. Community. Tacos. And the truth that people trust a good taco stand more than a multinational bank.</div></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- MARGARITA CLUB -->
-  <section id="margarita" style="background:#0a0a0a;padding:5rem 1.5rem">
-    <div class="section-inner">
-      <p class="section-label">Pre-Launch Exclusive</p>
-      <h2 class="section-title">Join the <span>Margarita Club 🍹</span></h2>
-      <p class="section-desc">Buy Juan a margarita before launch. Get 100,000 $JUAN airdropped to your wallet + an exclusive $USDjuan NFT. First 500 wallets only.</p>
-
-      <!-- Counter -->
-      <div style="display:flex;align-items:center;gap:2rem;margin-top:2.5rem;flex-wrap:wrap">
-        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.3);border-radius:16px;padding:1.5rem 2rem;text-align:center;min-width:160px">
-          <div id="mc-count" style="font-family:'Fredoka One',cursive;font-size:3rem;color:var(--orange2);line-height:1">0</div>
-          <div style="font-size:0.75rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-top:0.3rem">Joined</div>
-        </div>
-        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.15);border-radius:16px;padding:1.5rem 2rem;text-align:center;min-width:160px">
-          <div id="mc-remaining" style="font-family:'Fredoka One',cursive;font-size:3rem;color:var(--green2);line-height:1">500</div></div>
-          <div style="font-size:0.75rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-top:0.3rem">Spots Left</div>
-        </div>
-        <div style="flex:1;min-width:200px">
-          <div style="background:#1a1a1a;border-radius:999px;height:12px;overflow:hidden">
-            <div id="mc-bar" style="height:100%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:999px;width:0%;transition:width 1s ease"></div>
-          </div>
-          <div style="font-size:0.8rem;color:#555;margin-top:0.5rem;font-weight:700">0 / 500 spots filled</div>
-        </div>
-      </div>
-
-      <!-- Perks -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-top:2rem">
-        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.15);border-radius:12px;padding:1.2rem;text-align:center">
-          <div style="font-size:2rem;margin-bottom:0.5rem">🪙</div>
-          <div style="font-family:'Fredoka One',cursive;color:var(--orange2);margin-bottom:0.3rem">100,000 $JUAN</div>
-          <div style="font-size:0.8rem;color:#666">Airdropped at launch</div>
-        </div>
-        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.15);border-radius:12px;padding:1.2rem;text-align:center">
-          <div style="font-size:2rem;margin-bottom:0.5rem">🖼️</div>
-          <div style="font-family:'Fredoka One',cursive;color:var(--orange2);margin-bottom:0.3rem">Exclusive NFT</div>
-          <div style="font-size:0.8rem;color:#666">$USDjuan OG badge</div>
-        </div>
-        <div style="background:var(--card-bg);border:1px solid rgba(255,107,0,0.15);border-radius:12px;padding:1.2rem;text-align:center">
-          <div style="font-size:2rem;margin-bottom:0.5rem">👑</div>
-          <div style="font-family:'Fredoka One',cursive;color:var(--orange2);margin-bottom:0.3rem">OG Status</div>
-          <div style="font-size:0.8rem;color:#666">Wall of fame forever</div>
-        </div>
-      </div>
-
-      <!-- Connect + Pay -->
-      <div style="margin-top:2.5rem;background:var(--card-bg);border:1px solid rgba(255,107,0,0.2);border-radius:16px;padding:2rem">
-        <div id="mc-wallet-section">
-          <p style="color:#888;margin-bottom:1.2rem;font-size:0.95rem">Connect your Phantom wallet to join the Margarita Club.</p>
-          <button onclick="connectWallet()" class="btn-primary" style="font-size:0.95rem">🔌 Connect Phantom Wallet</button>
-        </div>
-
-        <div id="mc-pay-section" style="display:none">
-          <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:1.2rem;flex-wrap:wrap">
-            <div style="width:10px;height:10px;border-radius:50%;background:var(--green2)"></div>
-            <span style="font-family:monospace;font-size:0.85rem;color:#ccc" id="mc-wallet-display"></span>
-          </div>
-          <button onclick="buyMargarita()" id="mc-btn" class="btn-primary" style="font-size:0.95rem">🍹 Buy Juan a Margarita — 0.005 SOL</button>
-          <p style="font-size:0.78rem;color:#444;margin-top:0.8rem">0.005 SOL ≈ a round of margaritas for the crew</p>
-        </div>
-
-        <div id="mc-success-section" style="display:none;text-align:center;padding:1rem 0">
-          <div style="font-size:3rem;margin-bottom:0.5rem">🍹</div>
-          <div style="font-family:'Fredoka One',cursive;font-size:1.5rem;color:var(--green2);margin-bottom:0.5rem">You're in the club!</div>
-          <div style="color:#888;font-size:0.9rem">Your wallet is registered. You'll receive 100,000 $JUAN + NFT at launch.</div>
-        </div>
-
-        <div id="mc-status-msg" style="margin-top:1rem;font-size:0.85rem;color:var(--orange);display:none"></div>
-      </div>
-
-      <!-- Margarita Wall -->
-      <div style="margin-top:2.5rem">
-        <h3 style="font-family:'Fredoka One',cursive;font-size:1.4rem;margin-bottom:1rem;color:#fff">🍹 The Margarita Wall</h3>
-        <div id="mc-wall" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.6rem;max-height:400px;overflow-y:auto">
-          <div style="color:#444;font-size:0.85rem;font-style:italic">No one yet — be the first!</div>
-        </div>
       </div>
     </div>
   </section>
