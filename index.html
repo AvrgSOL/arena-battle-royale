@@ -538,7 +538,7 @@
       hideStatus();
       try {
         const { Transaction, SystemProgram, PublicKey, Connection } = solanaWeb3;
-        const conn    = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+        const conn    = new Connection('https://mainnet.helius-rpc.com/?api-key=b9ba80de-9e4f-44b8-b333-572a6b7f5674', 'confirmed');
         const from    = new PublicKey(connectedWallet);
         const to      = new PublicKey(TREASURY);
         const { blockhash } = await conn.getLatestBlockhash();
